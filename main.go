@@ -97,9 +97,11 @@ func printOAuthConfigError() {
 	fmt.Print(`Error: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set.
 --------
 Follow the steps:
-1. Open https://console.cloud.google.com/apis/credentials
-2. Create an OAuth client ID where the application type is other.
-3. Set the following environment variables:
+1. Open https://console.cloud.google.com/apis/library/photoslibrary.googleapis.com/
+2. Enable Photos Library API.
+3. Open https://console.cloud.google.com/apis/credentials
+4. Create an OAuth client ID where the application type is other.
+5. Set the following environment variables:
 export GOOGLE_CLIENT_ID=
 export GOOGLE_CLIENT_SECRET=
 --------
