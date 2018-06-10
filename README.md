@@ -14,7 +14,13 @@ export GOOGLE_CLIENT_ID=
 export GOOGLE_CLIENT_SECRET=
 ```
 
-Create an album with files:
+To create an album with files:
+
+```sh
+gpup --album-name "My Album" *.jpg
+```
+
+To add files to your library (not create an album):
 
 ```sh
 gpup *.jpg

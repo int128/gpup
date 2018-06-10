@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"strings"
 
 	"google.golang.org/api/photoslibrary/v1"
 )
@@ -31,17 +30,37 @@ func New(client *http.Client) (*Photos, error) {
 	return &Photos{
 		client:  client,
 		service: service,
-		log:     log.New(os.Stdout, "photos", log.LstdFlags),
+		log:     log.New(os.Stdout, "", log.LstdFlags),
 	}, nil
 }
 
+// AddToLibrary adds the files to the library.
+// This method tries uploading all files and ignores any error.
+// If no file could be uploaded, this method returns an error.
+func (p *Photos) AddToLibrary(filepaths []string) (int, error) {
+	p.log.Printf("Uploading %d files", len(filepaths))
+	mediaItems := p.UploadFiles(filepaths)
+	if len(mediaItems) == 0 {
+		return 0, fmt.Errorf("Could not upload any file")
+	}
+	p.log.Printf("Adding %d files to the library", len(mediaItems))
+	batch, err := p.service.MediaItems.BatchCreate(&photoslibrary.BatchCreateMediaItemsRequest{
+		NewMediaItems: mediaItems,
+	}).Do()
+	if err != nil {
+		return 0, fmt.Errorf("Error while adding files to the album: %s", err)
+	}
+	return len(batch.NewMediaItemResults), nil
+}
+
 // CreateAlbum creates an album with the files.
+// This method tries uploading all files and ignores any error.
+// If no file could be uploaded, this method returns an error.
 func (p *Photos) CreateAlbum(title string, filepaths []string) (*photoslibrary.Album, error) {
 	p.log.Printf("Uploading %d files", len(filepaths))
-	mediaItems, err := p.UploadFiles(filepaths)
-	if err != nil {
-		p.log.Printf("[warning] %s", err.Error())
-		p.log.Printf("[warning] Continue to create an album with %d files", len(mediaItems))
+	mediaItems := p.UploadFiles(filepaths)
+	if len(mediaItems) == 0 {
+		return nil, fmt.Errorf("Could not upload any file")
 	}
 
 	p.log.Printf("Creating an album %s", title)
@@ -51,39 +70,35 @@ func (p *Photos) CreateAlbum(title string, filepaths []string) (*photoslibrary.A
 		},
 	}).Do()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error while creating an album: %s", err)
 	}
 
-	p.log.Printf("Adding %d files into the album id=%s", len(mediaItems), album.Id)
-	batch, err := p.service.MediaItems.BatchCreate(&photoslibrary.BatchCreateMediaItemsRequest{
+	p.log.Printf("Adding %d files into the album %s", len(mediaItems), album.Title)
+	_, err = p.service.MediaItems.BatchCreate(&photoslibrary.BatchCreateMediaItemsRequest{
 		AlbumId:       album.Id,
 		NewMediaItems: mediaItems,
 	}).Do()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error while adding files to the album: %s", err)
 	}
-
-	p.log.Printf("Added %d files into the album id=%s", len(batch.NewMediaItemResults), album.Id)
-	return album, err
+	return album, nil
 }
 
 // UploadFiles uploads the files.
-// If any error occurs while uploading, it continues uploading remaining and returns all errors.
-func (p *Photos) UploadFiles(filepaths []string) ([]*photoslibrary.NewMediaItem, error) {
+// This method tries uploading all files and ignores any error.
+// If no file could be uploaded, this method returns an empty array.
+func (p *Photos) UploadFiles(filepaths []string) []*photoslibrary.NewMediaItem {
 	items := make([]*photoslibrary.NewMediaItem, 0, len(filepaths))
-	errs := make([]string, 0, len(filepaths))
 	for _, filepath := range filepaths {
 		item, err := p.UploadFile(filepath)
-		if err != nil {
-			errs = append(errs, err.Error())
-		} else {
+		switch {
+		case err != nil:
+			p.log.Printf("Error while uploading file %s: %s", filepath, err)
+		default:
 			items = append(items, item)
 		}
 	}
-	if len(errs) > 0 {
-		return nil, fmt.Errorf("Could not upload some files:\n%s", strings.Join(errs, "\n"))
-	}
-	return items, nil
+	return items
 }
 
 // UploadFile uploads the file.
