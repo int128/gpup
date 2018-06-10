@@ -11,6 +11,8 @@ import (
 	"google.golang.org/api/photoslibrary/v1"
 )
 
+const batchCreateSize = 50
+
 const apiVersion = "v1"
 const basePath = "https://photoslibrary.googleapis.com/"
 
@@ -43,14 +45,17 @@ func (p *Photos) AddToLibrary(filepaths []string) (int, error) {
 	if len(mediaItems) == 0 {
 		return 0, fmt.Errorf("Could not upload any file")
 	}
-	p.log.Printf("Adding %d files to the library", len(mediaItems))
-	batch, err := p.service.MediaItems.BatchCreate(&photoslibrary.BatchCreateMediaItemsRequest{
-		NewMediaItems: mediaItems,
-	}).Do()
-	if err != nil {
-		return 0, fmt.Errorf("Error while adding files to the album: %s", err)
+
+	for _, chunk := range splitMediaItems(mediaItems, batchCreateSize) {
+		p.log.Printf("Adding %d files to the library", len(chunk))
+		_, err := p.service.MediaItems.BatchCreate(&photoslibrary.BatchCreateMediaItemsRequest{
+			NewMediaItems: chunk,
+		}).Do()
+		if err != nil {
+			return 0, fmt.Errorf("Error while adding files to the album: %s", err)
+		}
 	}
-	return len(batch.NewMediaItemResults), nil
+	return len(mediaItems), nil
 }
 
 // CreateAlbum creates an album with the files.
@@ -73,13 +78,15 @@ func (p *Photos) CreateAlbum(title string, filepaths []string) (*photoslibrary.A
 		return nil, fmt.Errorf("Error while creating an album: %s", err)
 	}
 
-	p.log.Printf("Adding %d files into the album %s", len(mediaItems), album.Title)
-	_, err = p.service.MediaItems.BatchCreate(&photoslibrary.BatchCreateMediaItemsRequest{
-		AlbumId:       album.Id,
-		NewMediaItems: mediaItems,
-	}).Do()
-	if err != nil {
-		return nil, fmt.Errorf("Error while adding files to the album: %s", err)
+	for _, chunk := range splitMediaItems(mediaItems, batchCreateSize) {
+		p.log.Printf("Adding %d files into the album %s", len(chunk), album.Title)
+		_, err := p.service.MediaItems.BatchCreate(&photoslibrary.BatchCreateMediaItemsRequest{
+			AlbumId:       album.Id,
+			NewMediaItems: chunk,
+		}).Do()
+		if err != nil {
+			return nil, fmt.Errorf("Error while adding files to the album: %s", err)
+		}
 	}
 	return album, nil
 }

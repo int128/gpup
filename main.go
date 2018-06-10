@@ -63,7 +63,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Printf("Successfuly created an album %s", album.Title)
+		log.Printf("Successfuly created the album %s", album.Title)
 	} else {
 		added, err := service.AddToLibrary(files)
 		if err != nil {
