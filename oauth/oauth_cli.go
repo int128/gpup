@@ -2,8 +2,6 @@ package oauth
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/binary"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,8 +11,8 @@ import (
 	photoslibrary "google.golang.org/api/photoslibrary/v1"
 )
 
-// NewClient creates a new http.Client with a bearer access token
-func NewClient(ctx context.Context, clientID string, clientSecret string) (*http.Client, error) {
+// NewClientViaCLI creates a new http.Client via CLI.
+func NewClientViaCLI(ctx context.Context, clientID string, clientSecret string) (*http.Client, error) {
 	config := &oauth2.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
@@ -27,23 +25,15 @@ func NewClient(ctx context.Context, clientID string, clientSecret string) (*http
 		return nil, err
 	}
 	authCodeURL := config.AuthCodeURL(state)
-	log.Printf("Open %s", authCodeURL)
+	log.Printf("Open %s for authorization", authCodeURL)
 	fmt.Print("Enter code: ")
-	var authCode string
-	if _, err := fmt.Scanln(&authCode); err != nil {
+	var code string
+	if _, err := fmt.Scanln(&code); err != nil {
 		return nil, err
 	}
-	accessToken, err := config.Exchange(ctx, authCode)
+	token, err := config.Exchange(ctx, code)
 	if err != nil {
 		return nil, err
 	}
-	return config.Client(ctx, accessToken), nil
-}
-
-func generateOAuthState() (string, error) {
-	var n uint64
-	if err := binary.Read(rand.Reader, binary.LittleEndian, &n); err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%x", n), nil
+	return config.Client(ctx, token), nil
 }

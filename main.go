@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,7 +15,8 @@ import (
 )
 
 var opts struct {
-	AlbumTitle string `short:"a" long:"album-title" value-name:"TITLE" description:"Create an album and add files into it"`
+	AlbumTitle  string `short:"a" long:"album-title" value-name:"TITLE" description:"Create an album and add files into it"`
+	OAuthMethod string `long:"oauth-method" default:"browser" choice:"browser" choice:"cli" description:"OAuth method"`
 }
 
 func main() {
@@ -49,7 +51,16 @@ func main() {
 	}
 
 	ctx := context.Background()
-	client, err := oauth.NewClient(ctx, clientID, clientSecret)
+	client, err := func() (*http.Client, error) {
+		switch opts.OAuthMethod {
+		case "browser":
+			return oauth.NewClientViaBrowser(ctx, clientID, clientSecret)
+		case "cli":
+			return oauth.NewClientViaCLI(ctx, clientID, clientSecret)
+		default:
+			return nil, fmt.Errorf("Unknown oauth-method")
+		}
+	}()
 	if err != nil {
 		log.Fatal(err)
 	}
