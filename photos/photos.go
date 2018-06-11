@@ -117,7 +117,7 @@ func (p *Photos) UploadFile(filepath string) (*photoslibrary.NewMediaItem, error
 	defer r.Close()
 
 	filename := path.Base(filepath)
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/%s/uploads", basePath, apiVersion), r)
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s%s/uploads", basePath, apiVersion), r)
 	if err != nil {
 		return nil, fmt.Errorf("Could not create a request for uploading file %s: %s", filepath, err)
 	}
