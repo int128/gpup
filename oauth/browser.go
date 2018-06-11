@@ -22,6 +22,26 @@ func NewClientViaBrowser(ctx context.Context, clientID string, clientSecret stri
 		Scopes:       []string{photoslibrary.PhotoslibraryScope},
 		RedirectURL:  fmt.Sprintf("http://localhost:%d/", httpPort),
 	}
+	cache, err := FindTokenCache(config)
+	switch {
+	case cache != nil:
+		return config.Client(ctx, cache), nil
+	case err != nil:
+		log.Printf("Could not find token cache: %s", err)
+		fallthrough
+	default:
+		token, err := getTokenViaBrowser(ctx, config)
+		if err != nil {
+			return nil, err
+		}
+		if err := CreateTokenCache(token, config); err != nil {
+			log.Printf("Could not store token cache: %s", err)
+		}
+		return config.Client(ctx, token), nil
+	}
+}
+
+func getTokenViaBrowser(ctx context.Context, config *oauth2.Config) (*oauth2.Token, error) {
 	state, err := generateOAuthState()
 	if err != nil {
 		return nil, err
@@ -33,12 +53,12 @@ func NewClientViaBrowser(ctx context.Context, clientID string, clientSecret stri
 	}
 	token, err := config.Exchange(ctx, code)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Could not exchange oauth code: %s", err)
 	}
-	return config.Client(ctx, token), nil
+	return token, nil
 }
 
-func getCodeViaBrowser(ctx context.Context, config *oauth2.Config, state string) (code string, err error) {
+func getCodeViaBrowser(ctx context.Context, config *oauth2.Config, state string) (string, error) {
 	codeCh := make(chan string)
 	errCh := make(chan error)
 	server := http.Server{

@@ -20,6 +20,26 @@ func NewClientViaCLI(ctx context.Context, clientID string, clientSecret string) 
 		Scopes:       []string{photoslibrary.PhotoslibraryScope},
 		RedirectURL:  "urn:ietf:wg:oauth:2.0:oob",
 	}
+	cache, err := FindTokenCache(config)
+	switch {
+	case cache != nil:
+		return config.Client(ctx, cache), nil
+	case err != nil:
+		log.Printf("Could not find token cache: %s", err)
+		fallthrough
+	default:
+		token, err := getTokenViaCLI(ctx, config)
+		if err != nil {
+			return nil, err
+		}
+		if err := CreateTokenCache(token, config); err != nil {
+			log.Printf("Could not store token cache: %s", err)
+		}
+		return config.Client(ctx, token), nil
+	}
+}
+
+func getTokenViaCLI(ctx context.Context, config *oauth2.Config) (*oauth2.Token, error) {
 	state, err := generateOAuthState()
 	if err != nil {
 		return nil, err
@@ -33,7 +53,7 @@ func NewClientViaCLI(ctx context.Context, clientID string, clientSecret string) 
 	}
 	token, err := config.Exchange(ctx, code)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Could not exchange oauth code: %s", err)
 	}
-	return config.Client(ctx, token), nil
+	return token, nil
 }
