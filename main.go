@@ -15,20 +15,16 @@ import (
 )
 
 var opts struct {
-	AlbumTitle  string `short:"a" long:"album-title" value-name:"TITLE" description:"Create an album and add files into it"`
-	OAuthMethod string `long:"oauth-method" default:"browser" choice:"browser" choice:"cli" description:"OAuth method"`
+	AlbumTitle   string `short:"a" long:"album-title" value-name:"TITLE" description:"Create an album and add files into it"`
+	OAuthMethod  string `long:"oauth-method" default:"browser" choice:"browser" choice:"cli" description:"OAuth authorization method"`
+	ClientID     string `long:"google-client-id" env:"GOOGLE_CLIENT_ID" required:"1" description:"Google API client ID"`
+	ClientSecret string `long:"google-client-secret" env:"GOOGLE_CLIENT_SECRET" required:"1" description:"Google API client secret"`
 }
 
 func main() {
-	clientID := os.Getenv("GOOGLE_CLIENT_ID")
-	clientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
-	if clientID == "" || clientSecret == "" {
-		printOAuthConfigError()
-		os.Exit(1)
-	}
-
 	parser := flags.NewParser(&opts, flags.Default)
 	parser.Usage = "[OPTIONS] FILE or DIRECTORY..."
+	parser.LongDescription = oauthDescription
 	args, err := parser.Parse()
 	if err != nil {
 		log.Fatal(err)
@@ -54,9 +50,9 @@ func main() {
 	client, err := func() (*http.Client, error) {
 		switch opts.OAuthMethod {
 		case "browser":
-			return oauth.NewClientViaBrowser(ctx, clientID, clientSecret)
+			return oauth.NewClientViaBrowser(ctx, opts.ClientID, opts.ClientSecret)
 		case "cli":
-			return oauth.NewClientViaCLI(ctx, clientID, clientSecret)
+			return oauth.NewClientViaCLI(ctx, opts.ClientID, opts.ClientSecret)
 		default:
 			return nil, fmt.Errorf("Unknown oauth-method")
 		}
@@ -104,17 +100,10 @@ func findFiles(filePaths []string) ([]string, error) {
 	return files, nil
 }
 
-func printOAuthConfigError() {
-	fmt.Print(`Error: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set.
---------
-Follow the steps:
-1. Open https://console.cloud.google.com/apis/library/photoslibrary.googleapis.com/
-2. Enable Photos Library API.
-3. Open https://console.cloud.google.com/apis/credentials
-4. Create an OAuth client ID where the application type is other.
-5. Set the following environment variables:
-export GOOGLE_CLIENT_ID=
-export GOOGLE_CLIENT_SECRET=
---------
-`)
-}
+const oauthDescription = `
+	Setup:
+	1. Open https://console.cloud.google.com/apis/library/photoslibrary.googleapis.com/
+	2. Enable Photos Library API.
+	3. Open https://console.cloud.google.com/apis/credentials
+	4. Create an OAuth client ID where the application type is other.
+	5. Export GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET variables or set the options.`
