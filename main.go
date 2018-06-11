@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -47,16 +46,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	client, err := func() (*http.Client, error) {
-		switch opts.OAuthMethod {
-		case "browser":
-			return oauth.NewClientViaBrowser(ctx, opts.ClientID, opts.ClientSecret)
-		case "cli":
-			return oauth.NewClientViaCLI(ctx, opts.ClientID, opts.ClientSecret)
-		default:
-			return nil, fmt.Errorf("Unknown oauth-method")
-		}
-	}()
+	client, err := oauth.NewClient(ctx, opts.OAuthMethod, opts.ClientID, opts.ClientSecret)
 	if err != nil {
 		log.Fatal(err)
 	}

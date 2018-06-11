@@ -13,7 +13,7 @@ import (
 
 const httpPort = 8000
 
-// NewClientViaBrowser creates a new http.Client via web browser.
+// NewClientViaBrowser creates an OAuth client via web browser.
 func NewClientViaBrowser(ctx context.Context, clientID string, clientSecret string) (*http.Client, error) {
 	config := &oauth2.Config{
 		ClientID:     clientID,

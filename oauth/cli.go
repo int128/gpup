@@ -11,7 +11,7 @@ import (
 	photoslibrary "google.golang.org/api/photoslibrary/v1"
 )
 
-// NewClientViaCLI creates a new http.Client via CLI.
+// NewClientViaCLI creates an OAuth client via CLI.
 func NewClientViaCLI(ctx context.Context, clientID string, clientSecret string) (*http.Client, error) {
 	config := &oauth2.Config{
 		ClientID:     clientID,
