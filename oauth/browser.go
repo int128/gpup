@@ -13,35 +13,19 @@ import (
 
 const httpPort = 8000
 
-// NewClientViaBrowser creates an OAuth client via web browser.
-func NewClientViaBrowser(ctx context.Context, clientID string, clientSecret string) (*http.Client, error) {
-	config := &oauth2.Config{
+// NewConfigForBrowser returns a config for browser interaction.
+func NewConfigForBrowser(clientID string, clientSecret string) *oauth2.Config {
+	return &oauth2.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		Endpoint:     google.Endpoint,
 		Scopes:       []string{photoslibrary.PhotoslibraryScope},
 		RedirectURL:  fmt.Sprintf("http://localhost:%d/", httpPort),
 	}
-	cache, err := FindTokenCache(config)
-	switch {
-	case cache != nil:
-		return config.Client(ctx, cache), nil
-	case err != nil:
-		log.Printf("Could not find token cache: %s", err)
-		fallthrough
-	default:
-		token, err := getTokenViaBrowser(ctx, config)
-		if err != nil {
-			return nil, err
-		}
-		if err := CreateTokenCache(token, config); err != nil {
-			log.Printf("Could not store token cache: %s", err)
-		}
-		return config.Client(ctx, token), nil
-	}
 }
 
-func getTokenViaBrowser(ctx context.Context, config *oauth2.Config) (*oauth2.Token, error) {
+// GetTokenViaBrowser returns a token by browser interaction.
+func GetTokenViaBrowser(ctx context.Context, config *oauth2.Config) (*oauth2.Token, error) {
 	state, err := generateOAuthState()
 	if err != nil {
 		return nil, err

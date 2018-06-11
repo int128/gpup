@@ -1,6 +1,7 @@
 package oauth
 
 import (
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/json"
@@ -13,6 +14,28 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"golang.org/x/oauth2"
 )
+
+// GetTokenFromCacheOrServer returns token from cache if it exists.
+// It performs token request and stores cache otherwise.
+func GetTokenFromCacheOrServer(ctx context.Context, config *oauth2.Config, get func(ctx context.Context, config *oauth2.Config) (*oauth2.Token, error)) (*oauth2.Token, error) {
+	cache, err := FindTokenCache(config)
+	switch {
+	case cache != nil:
+		return cache, nil
+	case err != nil:
+		log.Printf("Could not find token cache: %s", err)
+		fallthrough
+	default:
+		token, err := get(ctx, config)
+		if err != nil {
+			return nil, err
+		}
+		if err := CreateTokenCache(token, config); err != nil {
+			log.Printf("Could not store token cache: %s", err)
+		}
+		return token, nil
+	}
+}
 
 // FindTokenCache returns token if the cache file exists.
 // Otherwise returns nil.

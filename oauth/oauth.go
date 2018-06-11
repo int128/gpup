@@ -12,9 +12,19 @@ import (
 func NewClient(ctx context.Context, method string, clientID string, clientSecret string) (*http.Client, error) {
 	switch method {
 	case "browser":
-		return NewClientViaBrowser(ctx, clientID, clientSecret)
+		config := NewConfigForBrowser(clientID, clientSecret)
+		token, err := GetTokenFromCacheOrServer(ctx, config, GetTokenViaBrowser)
+		if err != nil {
+			return nil, fmt.Errorf("Could not create oauth client: %s", err)
+		}
+		return config.Client(ctx, token), nil
 	case "cli":
-		return NewClientViaCLI(ctx, clientID, clientSecret)
+		config := NewConfigForCLI(clientID, clientSecret)
+		token, err := GetTokenFromCacheOrServer(ctx, config, GetTokenViaCLI)
+		if err != nil {
+			return nil, fmt.Errorf("Could not create oauth client: %s", err)
+		}
+		return config.Client(ctx, token), nil
 	default:
 		return nil, fmt.Errorf("Unknown oauth method")
 	}
