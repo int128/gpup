@@ -56,17 +56,14 @@ func main() {
 	}
 
 	if opts.AlbumTitle != "" {
-		album, err := service.CreateAlbum(opts.AlbumTitle, files)
+		_, err := service.CreateAlbum(opts.AlbumTitle, files)
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Printf("Successfuly created the album %s", album.Title)
 	} else {
-		added, err := service.AddToLibrary(files)
-		if err != nil {
+		if err := service.AddToLibrary(files); err != nil {
 			log.Fatal(err)
 		}
-		log.Printf("Successfuly added %d files to the library", added)
 	}
 }
 

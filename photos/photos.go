@@ -39,36 +39,35 @@ func New(client *http.Client) (*Photos, error) {
 // AddToLibrary adds the files to the library.
 // This method tries uploading all files and ignores any error.
 // If no file could be uploaded, this method returns an error.
-func (p *Photos) AddToLibrary(filepaths []string) (int, error) {
-	p.log.Printf("Uploading %d files", len(filepaths))
+func (p *Photos) AddToLibrary(filepaths []string) error {
+	p.log.Printf("Uploading %d file(s)", len(filepaths))
 	mediaItems := p.UploadFiles(filepaths)
 	if len(mediaItems) == 0 {
-		return 0, fmt.Errorf("Could not upload any file")
+		return fmt.Errorf("Could not upload any file")
 	}
-
 	for _, chunk := range splitMediaItems(mediaItems, batchCreateSize) {
-		p.log.Printf("Adding %d files to the library", len(chunk))
+		p.log.Printf("Adding %d file(s) to the library", len(chunk))
 		_, err := p.service.MediaItems.BatchCreate(&photoslibrary.BatchCreateMediaItemsRequest{
 			NewMediaItems: chunk,
 		}).Do()
 		if err != nil {
-			return 0, fmt.Errorf("Error while adding files to the album: %s", err)
+			return fmt.Errorf("Error while adding files to the album: %s", err)
 		}
 	}
-	return len(mediaItems), nil
+	return nil
 }
 
 // CreateAlbum creates an album with the files.
 // This method tries uploading all files and ignores any error.
 // If no file could be uploaded, this method returns an error.
 func (p *Photos) CreateAlbum(title string, filepaths []string) (*photoslibrary.Album, error) {
-	p.log.Printf("Uploading %d files", len(filepaths))
+	p.log.Printf("Uploading %d file(s)", len(filepaths))
 	mediaItems := p.UploadFiles(filepaths)
 	if len(mediaItems) == 0 {
 		return nil, fmt.Errorf("Could not upload any file")
 	}
 
-	p.log.Printf("Creating an album %s", title)
+	p.log.Printf("Creating album %s", title)
 	album, err := p.service.Albums.Create(&photoslibrary.CreateAlbumRequest{
 		Album: &photoslibrary.Album{
 			Title: title,
@@ -79,7 +78,7 @@ func (p *Photos) CreateAlbum(title string, filepaths []string) (*photoslibrary.A
 	}
 
 	for _, chunk := range splitMediaItems(mediaItems, batchCreateSize) {
-		p.log.Printf("Adding %d files into the album %s", len(chunk), album.Title)
+		p.log.Printf("Adding %d file(s) into the album %s", len(chunk), album.Title)
 		_, err := p.service.MediaItems.BatchCreate(&photoslibrary.BatchCreateMediaItemsRequest{
 			AlbumId:       album.Id,
 			NewMediaItems: chunk,
@@ -123,7 +122,7 @@ func (p *Photos) UploadFile(filepath string) (*photoslibrary.NewMediaItem, error
 	}
 	req.Header.Add("X-Goog-Upload-File-Name", filename)
 
-	p.log.Printf("Uploading file %s", filepath)
+	p.log.Printf("Uploading %s", filepath)
 	res, err := p.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("Could not send a request for uploading file %s: %s", filepath, err)
