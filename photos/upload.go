@@ -107,12 +107,12 @@ func (p *Photos) Append(album *photoslibrary.Album, mediaItems []*photoslibrary.
 	}
 	batch, err := p.service.MediaItems.BatchCreate(req).Do()
 	if err != nil {
-		return fmt.Errorf("Error while adding files to the album: %s", err)
+		return err
 	}
 	for _, result := range batch.NewMediaItemResults {
 		if result.Status.Code != 0 {
 			if mediaItem := findMediaItemByUploadToken(mediaItems, result.UploadToken); mediaItem != nil {
-				p.log.Printf("Could not add %s: %s (%d)", mediaItem.Description, result.Status.Message, result.Status.Code)
+				p.log.Printf("Skipped %s: %s (%d)", mediaItem.Description, result.Status.Message, result.Status.Code)
 			} else {
 				p.log.Printf("Error while adding files: %s (%d)", result.Status.Message, result.Status.Code)
 			}
