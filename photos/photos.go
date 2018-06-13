@@ -7,11 +7,14 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"sync"
 
 	"google.golang.org/api/photoslibrary/v1"
 )
 
 const batchCreateSize = 50
+
+const uploadConcurrency = 3
 
 const apiVersion = "v1"
 const basePath = "https://photoslibrary.googleapis.com/"
@@ -40,7 +43,6 @@ func New(client *http.Client) (*Photos, error) {
 // This method tries uploading all files and ignores any error.
 // If no file could be uploaded, this method returns an error.
 func (p *Photos) AddToLibrary(filepaths []string) error {
-	p.log.Printf("Uploading %d file(s)", len(filepaths))
 	mediaItems := p.UploadFiles(filepaths)
 	if len(mediaItems) == 0 {
 		return fmt.Errorf("Could not upload any file")
@@ -61,7 +63,6 @@ func (p *Photos) AddToLibrary(filepaths []string) error {
 // This method tries uploading all files and ignores any error.
 // If no file could be uploaded, this method returns an error.
 func (p *Photos) CreateAlbum(title string, filepaths []string) (*photoslibrary.Album, error) {
-	p.log.Printf("Uploading %d file(s)", len(filepaths))
 	mediaItems := p.UploadFiles(filepaths)
 	if len(mediaItems) == 0 {
 		return nil, fmt.Errorf("Could not upload any file")
@@ -94,17 +95,41 @@ func (p *Photos) CreateAlbum(title string, filepaths []string) (*photoslibrary.A
 // This method tries uploading all files and ignores any error.
 // If no file could be uploaded, this method returns an empty array.
 func (p *Photos) UploadFiles(filepaths []string) []*photoslibrary.NewMediaItem {
-	items := make([]*photoslibrary.NewMediaItem, 0, len(filepaths))
+	uploadQueue := make(chan string, len(filepaths))
 	for _, filepath := range filepaths {
-		item, err := p.UploadFile(filepath)
-		switch {
-		case err != nil:
+		uploadQueue <- filepath
+	}
+	close(uploadQueue)
+	p.log.Printf("Queued %d file(s)", len(filepaths))
+
+	aggregateQueue := make(chan *photoslibrary.NewMediaItem, len(filepaths))
+	workerGroup := new(sync.WaitGroup)
+	for i := 0; i < uploadConcurrency; i++ {
+		workerGroup.Add(1)
+		go p.uploadWorker(uploadQueue, aggregateQueue, workerGroup)
+	}
+	go func() {
+		workerGroup.Wait()
+		close(aggregateQueue)
+	}()
+
+	mediaItems := make([]*photoslibrary.NewMediaItem, 0, len(filepaths))
+	for mediaItem := range aggregateQueue {
+		mediaItems = append(mediaItems, mediaItem)
+	}
+	return mediaItems
+}
+
+func (p *Photos) uploadWorker(uploadQueue chan string, aggregateQueue chan *photoslibrary.NewMediaItem, workerGroup *sync.WaitGroup) {
+	defer workerGroup.Done()
+	for filepath := range uploadQueue {
+		mediaItem, err := p.UploadFile(filepath)
+		if err != nil {
 			p.log.Printf("Error while uploading file %s: %s", filepath, err)
-		default:
-			items = append(items, item)
+		} else {
+			aggregateQueue <- mediaItem
 		}
 	}
-	return items
 }
 
 // UploadFile uploads the file.
