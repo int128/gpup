@@ -95,17 +95,14 @@ func (p *Photos) UploadFile(filepath string) (*photoslibrary.NewMediaItem, error
 	}, nil
 }
 
-// Append appends the items to the album or your library (if album is nil).
+// Append appends the items to the album or your library (if albumId is empty).
 // If some item(s) have been failed, this method does not return an error but prints message(s).
 // If a network error occurs, this method returns the error.
-func (p *Photos) Append(album *photoslibrary.Album, mediaItems []*photoslibrary.NewMediaItem) error {
-	req := &photoslibrary.BatchCreateMediaItemsRequest{
+func (p *Photos) Append(albumID string, mediaItems []*photoslibrary.NewMediaItem) error {
+	batch, err := p.service.MediaItems.BatchCreate(&photoslibrary.BatchCreateMediaItemsRequest{
 		NewMediaItems: mediaItems,
-	}
-	if album != nil {
-		req.AlbumId = album.Id
-	}
-	batch, err := p.service.MediaItems.BatchCreate(req).Do()
+		AlbumId:       albumID,
+	}).Do()
 	if err != nil {
 		return err
 	}

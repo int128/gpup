@@ -41,7 +41,7 @@ func (p *Photos) AddToLibrary(filepaths []string) error {
 	}
 	for _, chunk := range splitMediaItems(mediaItems, batchCreateSize) {
 		p.log.Printf("Adding %d file(s) to the library", len(chunk))
-		if err := p.Append(nil, chunk); err != nil {
+		if err := p.Append("", chunk); err != nil {
 			return err
 		}
 	}
@@ -69,7 +69,7 @@ func (p *Photos) CreateAlbum(title string, filepaths []string) (*photoslibrary.A
 
 	for _, chunk := range splitMediaItems(mediaItems, batchCreateSize) {
 		p.log.Printf("Adding %d file(s) into the album %s", len(chunk), album.Title)
-		if err := p.Append(album, chunk); err != nil {
+		if err := p.Append(album.Id, chunk); err != nil {
 			return nil, err
 		}
 	}
