@@ -1,6 +1,7 @@
 package photos
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -34,8 +35,8 @@ func New(client *http.Client) (*Photos, error) {
 // AddToLibrary adds the files to the library.
 // This method tries uploading all files and ignores any error.
 // If no file could be uploaded, this method returns an error.
-func (p *Photos) AddToLibrary(filepaths []string) error {
-	mediaItems := p.UploadFiles(filepaths)
+func (p *Photos) AddToLibrary(ctx context.Context, filepaths []string) error {
+	mediaItems := p.UploadFiles(ctx, filepaths)
 	if len(mediaItems) == 0 {
 		return fmt.Errorf("Could not upload any file")
 	}
@@ -51,8 +52,8 @@ func (p *Photos) AddToLibrary(filepaths []string) error {
 // CreateAlbum creates an album with the files.
 // This method tries uploading all files and ignores any error.
 // If no file could be uploaded, this method returns an error.
-func (p *Photos) CreateAlbum(title string, filepaths []string) (*photoslibrary.Album, error) {
-	mediaItems := p.UploadFiles(filepaths)
+func (p *Photos) CreateAlbum(ctx context.Context, title string, filepaths []string) (*photoslibrary.Album, error) {
+	mediaItems := p.UploadFiles(ctx, filepaths)
 	if len(mediaItems) == 0 {
 		return nil, fmt.Errorf("Could not upload any file")
 	}

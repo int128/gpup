@@ -56,12 +56,12 @@ func main() {
 	}
 
 	if opts.AlbumTitle != "" {
-		_, err := service.CreateAlbum(opts.AlbumTitle, files)
+		_, err := service.CreateAlbum(ctx, opts.AlbumTitle, files)
 		if err != nil {
 			log.Fatal(err)
 		}
 	} else {
-		if err := service.AddToLibrary(files); err != nil {
+		if err := service.AddToLibrary(ctx, files); err != nil {
 			log.Fatal(err)
 		}
 	}
