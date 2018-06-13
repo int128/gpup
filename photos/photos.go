@@ -49,11 +49,10 @@ func (p *Photos) AddToLibrary(filepaths []string) error {
 	}
 	for _, chunk := range splitMediaItems(mediaItems, batchCreateSize) {
 		p.log.Printf("Adding %d file(s) to the library", len(chunk))
-		_, err := p.service.MediaItems.BatchCreate(&photoslibrary.BatchCreateMediaItemsRequest{
+		if err := p.batchCreate(&photoslibrary.BatchCreateMediaItemsRequest{
 			NewMediaItems: chunk,
-		}).Do()
-		if err != nil {
-			return fmt.Errorf("Error while adding files to the album: %s", err)
+		}); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -80,15 +79,40 @@ func (p *Photos) CreateAlbum(title string, filepaths []string) (*photoslibrary.A
 
 	for _, chunk := range splitMediaItems(mediaItems, batchCreateSize) {
 		p.log.Printf("Adding %d file(s) into the album %s", len(chunk), album.Title)
-		_, err := p.service.MediaItems.BatchCreate(&photoslibrary.BatchCreateMediaItemsRequest{
+		if err := p.batchCreate(&photoslibrary.BatchCreateMediaItemsRequest{
 			AlbumId:       album.Id,
 			NewMediaItems: chunk,
-		}).Do()
-		if err != nil {
-			return nil, fmt.Errorf("Error while adding files to the album: %s", err)
+		}); err != nil {
+			return nil, err
 		}
 	}
 	return album, nil
+}
+
+func (p *Photos) batchCreate(req *photoslibrary.BatchCreateMediaItemsRequest) error {
+	batch, err := p.service.MediaItems.BatchCreate(req).Do()
+	if err != nil {
+		return fmt.Errorf("Error while adding files to the album: %s", err)
+	}
+	for _, result := range batch.NewMediaItemResults {
+		if result.Status.Code != 0 {
+			if mediaItem := findMediaItemByUploadToken(req.NewMediaItems, result.UploadToken); mediaItem != nil {
+				p.log.Printf("Could not add %s: %s (%d)", mediaItem.Description, result.Status.Message, result.Status.Code)
+			} else {
+				p.log.Printf("Error while adding files: %s (%d)", result.Status.Message, result.Status.Code)
+			}
+		}
+	}
+	return nil
+}
+
+func findMediaItemByUploadToken(items []*photoslibrary.NewMediaItem, uploadToken string) *photoslibrary.NewMediaItem {
+	for _, mediaItem := range items {
+		if mediaItem.SimpleMediaItem.UploadToken == uploadToken {
+			return mediaItem
+		}
+	}
+	return nil
 }
 
 // UploadFiles uploads the files.
