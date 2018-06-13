@@ -12,12 +12,18 @@ import (
 
 	"github.com/lestrrat-go/backoff"
 
+	"google.golang.org/api/googleapi"
 	photoslibrary "google.golang.org/api/photoslibrary/v1"
 )
 
 const uploadConcurrency = 3
 
 var uploadRetryPolicy = backoff.NewExponential(
+	backoff.WithInterval(3*time.Second),
+	backoff.WithMaxRetries(5),
+)
+
+var appendRetryPolicy = backoff.NewExponential(
 	backoff.WithInterval(3*time.Second),
 	backoff.WithMaxRetries(5),
 )
@@ -120,24 +126,40 @@ func (p *Photos) UploadFile(ctx context.Context, filepath string) (*photoslibrar
 // Append appends the items to the album or your library (if albumId is empty).
 // If some item(s) have been failed, this method does not return an error but prints message(s).
 // If a network error occurs, this method returns the error.
-func (p *Photos) Append(albumID string, mediaItems []*photoslibrary.NewMediaItem) error {
-	batch, err := p.service.MediaItems.BatchCreate(&photoslibrary.BatchCreateMediaItemsRequest{
+func (p *Photos) Append(ctx context.Context, albumID string, mediaItems []*photoslibrary.NewMediaItem) error {
+	batch := p.service.MediaItems.BatchCreate(&photoslibrary.BatchCreateMediaItemsRequest{
 		NewMediaItems: mediaItems,
 		AlbumId:       albumID,
-	}).Do()
-	if err != nil {
-		return err
-	}
-	for _, result := range batch.NewMediaItemResults {
-		if result.Status.Code != 0 {
-			if mediaItem := findMediaItemByUploadToken(mediaItems, result.UploadToken); mediaItem != nil {
-				p.log.Printf("Skipped %s: %s (%d)", mediaItem.Description, result.Status.Message, result.Status.Code)
-			} else {
-				p.log.Printf("Error while adding files: %s (%d)", result.Status.Message, result.Status.Code)
+	})
+	b, cancel := appendRetryPolicy.Start(ctx)
+	defer cancel()
+	for backoff.Continue(b) {
+		res, err := batch.Do()
+		if err != nil {
+			if apiErr, ok := err.(*googleapi.Error); ok {
+				switch {
+				case apiErr.Code >= 500 && apiErr.Code <= 599:
+					p.log.Printf("Error while BatchCreate: %s", apiErr)
+					continue
+				default:
+					return fmt.Errorf("Error while BatchCreate: %s", apiErr)
+				}
+			}
+			p.log.Printf("Error while BatchCreate: %s", err)
+			continue
+		}
+		for _, result := range res.NewMediaItemResults {
+			if result.Status.Code != 0 {
+				if mediaItem := findMediaItemByUploadToken(mediaItems, result.UploadToken); mediaItem != nil {
+					p.log.Printf("Skipped %s: %s (%d)", mediaItem.Description, result.Status.Message, result.Status.Code)
+				} else {
+					p.log.Printf("Error while adding files: %s (%d)", result.Status.Message, result.Status.Code)
+				}
 			}
 		}
+		return nil
 	}
-	return nil
+	return fmt.Errorf("Could not perform BatchCreate: retry over")
 }
 
 func findMediaItemByUploadToken(mediaItems []*photoslibrary.NewMediaItem, uploadToken string) *photoslibrary.NewMediaItem {
