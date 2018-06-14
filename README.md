@@ -1,6 +1,6 @@
-# gpup
+# gpup [![CircleCI](https://circleci.com/gh/int128/gpup.svg?style=shield)](https://circleci.com/gh/int128/gpup)
 
-A command line tool to upload medium to your Google Photos Library or album.
+`gpup` is a command to upload medium to your Google Photos Library or album.
 
 This depends on the official [Google Photos Library API](https://developers.google.com/photos/library/guides/get-started).
 
