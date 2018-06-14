@@ -10,7 +10,7 @@ import (
 	"google.golang.org/api/photoslibrary/v1"
 )
 
-const batchCreateSize = 50
+const batchCreateSize = 20
 
 // Photos provides service for manage albums and uploading files.
 type Photos struct {

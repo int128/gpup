@@ -15,7 +15,7 @@ import (
 	photoslibrary "google.golang.org/api/photoslibrary/v1"
 )
 
-const uploadConcurrency = 3
+const uploadConcurrency = 4
 
 var uploadRetryPolicy = backoff.NewExponential(
 	backoff.WithInterval(3*time.Second),
@@ -128,6 +128,7 @@ func (p *Photos) Append(ctx context.Context, albumID string, mediaItems []*photo
 	batch := p.service.MediaItems.BatchCreate(&photoslibrary.BatchCreateMediaItemsRequest{
 		NewMediaItems: mediaItems,
 		AlbumId:       albumID,
+		AlbumPosition: &photoslibrary.AlbumPosition{Position: "LAST_IN_ALBUM"},
 	})
 	b, cancel := appendRetryPolicy.Start(ctx)
 	defer cancel()
