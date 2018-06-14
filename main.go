@@ -14,7 +14,7 @@ import (
 )
 
 var opts struct {
-	AlbumTitle   string `short:"a" long:"album-title" value-name:"TITLE" description:"Create an album and add files into it"`
+	NewAlbum     string `short:"n" long:"new-album" value-name:"TITLE" description:"Create an album and add files into it"`
 	OAuthMethod  string `long:"oauth-method" default:"browser" choice:"browser" choice:"cli" description:"OAuth authorization method"`
 	ClientID     string `long:"google-client-id" env:"GOOGLE_CLIENT_ID" required:"1" description:"Google API client ID"`
 	ClientSecret string `long:"google-client-secret" env:"GOOGLE_CLIENT_SECRET" required:"1" description:"Google API client secret"`
@@ -55,8 +55,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if opts.AlbumTitle != "" {
-		_, err := service.CreateAlbum(ctx, opts.AlbumTitle, files)
+	if opts.NewAlbum != "" {
+		_, err := service.CreateAlbum(ctx, opts.NewAlbum, files)
 		if err != nil {
 			log.Fatal(err)
 		}
