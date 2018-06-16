@@ -1,13 +1,13 @@
 # gpup [![CircleCI](https://circleci.com/gh/int128/gpup.svg?style=shield)](https://circleci.com/gh/int128/gpup)
 
-`gpup` is a command to upload medium to your Google Photos library or album.
+`gpup` is a command to upload files to your Google Photos library or album.
 
 This depends on the official [Google Photos Library API](https://developers.google.com/photos/library/guides/get-started).
 
 
 ## Getting Started
 
-Setup your API access:
+Setup your API access by the following steps:
 
 1. Open https://console.cloud.google.com/apis/library/photoslibrary.googleapis.com/
 1. Enable Photos Library API.
@@ -19,6 +19,8 @@ Setup your API access:
 export GOOGLE_CLIENT_ID=
 export GOOGLE_CLIENT_SECRET=
 ```
+
+Download the latest release from [releases](releases).
 
 To upload files in a folder to your Google Photos library:
 
@@ -71,16 +73,16 @@ Help Options:
 ```
 
 
-## Known Issues
+## Caveats
 
-There are some issues due to Google Photos Library API for now.
+At this time there are some limitations due to Google Photos Library API.
 
-If you upload an image without timestamp in the EXIF header, timestamp of the image will be now.
-Also timestamp of a movie will be now.
+If you upload an image without timestamp in the EXIF header, timestamp of the image will be current time.
+Also timestamp of a movie will be current time.
 Google Photos Library API does not provide setting timestamp for now.
 
 You cannot control order of uploading items.
-Google Photos Library API does not provide ordering items for now.
+Google Photos Library API does not provide ordering media items for now.
 
 
 ## Contribution
