@@ -13,14 +13,14 @@ Setup your API access by the following steps:
 1. Enable Photos Library API.
 1. Open https://console.cloud.google.com/apis/credentials
 1. Create an OAuth client ID where the application type is other.
-1. Set the following environment variables:
+1. Set the following environment variables in your shell:
 
 ```
 export GOOGLE_CLIENT_ID=
 export GOOGLE_CLIENT_SECRET=
 ```
 
-Download the latest release from [releases](releases).
+Download the latest release from [releases](https://github.com/int128/gpup/releases).
 
 To upload files in a folder to your Google Photos library:
 
@@ -42,7 +42,7 @@ $ gpup my-photos/
 Only first time you need to open browser for authorize API access.
 `gpup` will store the token to `~/.gpup_token` and use in the next time.
 
-You can create a new album and upload files into the album.
+You can create a new album and upload files into the album by `-n` option.
 
 ```sh
 gpup -n "My Album" my-photos/
