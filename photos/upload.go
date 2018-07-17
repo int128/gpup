@@ -93,6 +93,7 @@ func (p *Photos) UploadFile(ctx context.Context, filepath string) (*photoslibrar
 			p.log.Printf("Error while uploading %s: %s", filepath, err)
 			continue
 		}
+		defer res.Body.Close()
 
 		b, err := ioutil.ReadAll(res.Body)
 		if err != nil {
