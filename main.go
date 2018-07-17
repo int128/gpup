@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/int128/gpup/debug"
 	"github.com/int128/gpup/oauth"
 	"github.com/int128/gpup/photos"
 	flags "github.com/jessevdk/go-flags"
@@ -18,6 +19,7 @@ var opts struct {
 	OAuthMethod  string `long:"oauth-method" default:"browser" choice:"browser" choice:"cli" description:"OAuth authorization method"`
 	ClientID     string `long:"google-client-id" env:"GOOGLE_CLIENT_ID" required:"1" description:"Google API client ID"`
 	ClientSecret string `long:"google-client-secret" env:"GOOGLE_CLIENT_SECRET" required:"1" description:"Google API client secret"`
+	Debug        bool   `long:"debug" env:"DEBUG" description:"Enable request and response logging"`
 }
 
 func main() {
@@ -49,6 +51,9 @@ func main() {
 	client, err := oauth.NewClient(ctx, opts.OAuthMethod, opts.ClientID, opts.ClientSecret)
 	if err != nil {
 		log.Fatal(err)
+	}
+	if opts.Debug {
+		client = debug.NewClient(client)
 	}
 	service, err := photos.New(client)
 	if err != nil {

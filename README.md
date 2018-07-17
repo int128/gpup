@@ -67,6 +67,7 @@ Application Options:
       --oauth-method=[browser|cli]    OAuth authorization method (default: browser)
       --google-client-id=             Google API client ID [$GOOGLE_CLIENT_ID]
       --google-client-secret=         Google API client secret [$GOOGLE_CLIENT_SECRET]
+      --debug                         Enable request and response logging [$DEBUG]
 
 Help Options:
   -h, --help                          Show this help message
