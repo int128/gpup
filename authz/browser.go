@@ -1,4 +1,4 @@
-package oauth
+package authz
 
 import (
 	"context"
@@ -7,47 +7,39 @@ import (
 	"net/http"
 
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
-	photoslibrary "google.golang.org/api/photoslibrary/v1"
 )
 
-const httpPort = 8000
-
-// NewConfigForBrowser returns a config for browser interaction.
-func NewConfigForBrowser(clientID string, clientSecret string) *oauth2.Config {
-	return &oauth2.Config{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		Endpoint:     google.Endpoint,
-		Scopes:       []string{photoslibrary.PhotoslibraryScope},
-		RedirectURL:  fmt.Sprintf("http://localhost:%d/", httpPort),
-	}
+// BrowserAuthCodeFlow is a flow to get a token by browser interaction.
+type BrowserAuthCodeFlow struct {
+	oauth2.Config
+	Port int // HTTP server port
 }
 
-// GetTokenViaBrowser returns a token by browser interaction.
-func GetTokenViaBrowser(ctx context.Context, config *oauth2.Config) (*oauth2.Token, error) {
+// GetToken returns a token.
+func (f *BrowserAuthCodeFlow) GetToken(ctx context.Context) (*oauth2.Token, error) {
+	f.Config.RedirectURL = fmt.Sprintf("http://localhost:%d/", f.Port)
 	state, err := generateOAuthState()
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Open http://localhost:%d for authorization", httpPort)
-	code, err := getCodeViaBrowser(ctx, config, state)
+	log.Printf("Open http://localhost:%d for authorization", f.Port)
+	code, err := f.getCode(ctx, &f.Config, state)
 	if err != nil {
 		return nil, err
 	}
-	token, err := config.Exchange(ctx, code)
+	token, err := f.Config.Exchange(ctx, code)
 	if err != nil {
 		return nil, fmt.Errorf("Could not exchange oauth code: %s", err)
 	}
 	return token, nil
 }
 
-func getCodeViaBrowser(ctx context.Context, config *oauth2.Config, state string) (string, error) {
+func (f *BrowserAuthCodeFlow) getCode(ctx context.Context, config *oauth2.Config, state string) (string, error) {
 	codeCh := make(chan string)
 	errCh := make(chan error)
 	server := http.Server{
-		Addr: fmt.Sprintf(":%d", httpPort),
-		Handler: &AuthCodeGrantHandler{
+		Addr: fmt.Sprintf(":%d", f.Port),
+		Handler: &handler{
 			AuthCodeURL: config.AuthCodeURL(state),
 			Callback: func(code string, actualState string, err error) {
 				switch {
@@ -76,13 +68,12 @@ func getCodeViaBrowser(ctx context.Context, config *oauth2.Config, state string)
 	}
 }
 
-// AuthCodeGrantHandler handles requests for OIDC auth code grant
-type AuthCodeGrantHandler struct {
+type handler struct {
 	AuthCodeURL string
 	Callback    func(code string, state string, err error)
 }
 
-func (s *AuthCodeGrantHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s %s", r.Method, r.RequestURI)
 	switch r.URL.Path {
 	case "/":

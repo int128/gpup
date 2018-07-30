@@ -7,10 +7,17 @@ import (
 	"net/http"
 	"os"
 
+	"golang.org/x/oauth2/google"
 	"google.golang.org/api/photoslibrary/v1"
 )
 
 const batchCreateSize = 20
+
+// Endpoint is an URL of Google Photos Library API.
+var Endpoint = google.Endpoint
+
+// Scopes is a set of OAuth scopes.
+var Scopes = []string{photoslibrary.PhotoslibraryScope}
 
 // Photos provides service for manage albums and uploading files.
 type Photos struct {

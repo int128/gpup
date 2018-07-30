@@ -8,31 +8,69 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/int128/gpup/authz"
+	"github.com/int128/gpup/authz/cache"
 	"github.com/int128/gpup/debug"
-	"github.com/int128/gpup/oauth"
 	"github.com/int128/gpup/photos"
 	flags "github.com/jessevdk/go-flags"
+	"golang.org/x/oauth2"
 )
 
-var opts struct {
-	NewAlbum     string `short:"n" long:"new-album" value-name:"TITLE" description:"Create an album and add files into it"`
-	OAuthMethod  string `long:"oauth-method" default:"browser" choice:"browser" choice:"cli" description:"OAuth authorization method"`
-	ClientID     string `long:"google-client-id" env:"GOOGLE_CLIENT_ID" required:"1" description:"Google API client ID"`
-	ClientSecret string `long:"google-client-secret" env:"GOOGLE_CLIENT_SECRET" required:"1" description:"Google API client secret"`
-	Debug        bool   `long:"debug" env:"DEBUG" description:"Enable request and response logging"`
+type options struct {
+	NewAlbum           string `short:"n" long:"new-album" value-name:"TITLE" description:"Create an album and add files into it"`
+	OAuthMethod        string `long:"oauth-method" default:"browser" choice:"browser" choice:"cli" description:"OAuth authorization method"`
+	OAuthCacheFilename string `long:"oauth-cache-filename" default:"~/.gpup_token" description:"OAuth token cache filename"`
+	ClientID           string `long:"google-client-id" env:"GOOGLE_CLIENT_ID" required:"1" description:"Google API client ID"`
+	ClientSecret       string `long:"google-client-secret" env:"GOOGLE_CLIENT_SECRET" required:"1" description:"Google API client secret"`
+	Debug              bool   `long:"debug" env:"DEBUG" description:"Enable request and response logging"`
+}
+
+func (o *options) authzConfig() oauth2.Config {
+	return oauth2.Config{
+		ClientID:     o.ClientID,
+		ClientSecret: o.ClientSecret,
+		Endpoint:     photos.Endpoint,
+		Scopes:       photos.Scopes,
+	}
+}
+
+func (o *options) authzFlow() authz.Flow {
+	switch o.OAuthMethod {
+	case "browser":
+		return &authz.BrowserAuthCodeFlow{Config: o.authzConfig(), Port: 8000}
+	case "cli":
+		return &authz.CLIAuthCodeFlow{Config: o.authzConfig()}
+	default:
+		log.Fatalf("Invalid oauth-method: %s", o.OAuthMethod)
+		return nil
+	}
+}
+
+func parseOptions() (*options, []string, error) {
+	var o options
+	parser := flags.NewParser(&o, flags.HelpFlag)
+	parser.Usage = "[OPTIONS] FILE or DIRECTORY..."
+	parser.LongDescription = `
+		Setup:
+		1. Open https://console.cloud.google.com/apis/library/photoslibrary.googleapis.com/
+		2. Enable Photos Library API.
+		3. Open https://console.cloud.google.com/apis/credentials
+		4. Create an OAuth client ID where the application type is other.
+		5. Export GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET variables or set the options.`
+	args, err := parser.Parse()
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(args) == 0 {
+		return nil, nil, fmt.Errorf("Too few argument")
+	}
+	return &o, args, nil
 }
 
 func main() {
-	parser := flags.NewParser(&opts, flags.Default)
-	parser.Usage = "[OPTIONS] FILE or DIRECTORY..."
-	parser.LongDescription = oauthDescription
-	args, err := parser.Parse()
+	opts, args, err := parseOptions()
 	if err != nil {
 		log.Fatal(err)
-	}
-	if len(args) == 0 {
-		parser.WriteHelp(os.Stdout)
-		os.Exit(1)
 	}
 
 	files, err := findFiles(args)
@@ -47,19 +85,28 @@ func main() {
 		fmt.Printf("%3d: %s\n", i+1, file)
 	}
 
+	tokenCache, err := cache.New(opts.OAuthCacheFilename, cache.Secret(opts.ClientID+opts.ClientSecret))
+	if err != nil {
+		log.Fatal(err)
+	}
 	ctx := context.Background()
-	client, err := oauth.NewClient(ctx, opts.OAuthMethod, opts.ClientID, opts.ClientSecret)
+	token, err := authz.GetToken(ctx, opts.authzFlow(), tokenCache)
+	if err != nil {
+		log.Fatal(err)
+	}
+	config := opts.authzConfig()
+	client := config.Client(ctx, token)
 	if err != nil {
 		log.Fatal(err)
 	}
 	if opts.Debug {
 		client = debug.NewClient(client)
 	}
+
 	service, err := photos.New(client)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	if opts.NewAlbum != "" {
 		_, err := service.CreateAlbum(ctx, opts.NewAlbum, files)
 		if err != nil {
@@ -91,11 +138,3 @@ func findFiles(filePaths []string) ([]string, error) {
 	}
 	return files, nil
 }
-
-const oauthDescription = `
-	Setup:
-	1. Open https://console.cloud.google.com/apis/library/photoslibrary.googleapis.com/
-	2. Enable Photos Library API.
-	3. Open https://console.cloud.google.com/apis/credentials
-	4. Create an OAuth client ID where the application type is other.
-	5. Export GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET variables or set the options.`
