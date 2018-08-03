@@ -14,15 +14,11 @@ var appendRetryPolicy = backoff.NewExponential(
 	backoff.WithMaxRetries(5),
 )
 
-// Append appends the items to the album or your library (if albumId is empty).
+// BatchCreate creates the items to the album or your library.
 // If some item(s) have been failed, this method does not return an error but prints message(s).
 // If a network error occurs, this method retries and finally returns the error.
-func (p *Photos) Append(ctx context.Context, albumID string, mediaItems []*photoslibrary.NewMediaItem) error {
-	batch := p.service.MediaItems.BatchCreate(&photoslibrary.BatchCreateMediaItemsRequest{
-		NewMediaItems: mediaItems,
-		AlbumId:       albumID,
-		AlbumPosition: &photoslibrary.AlbumPosition{Position: "LAST_IN_ALBUM"},
-	})
+func (p *Photos) BatchCreate(ctx context.Context, req *photoslibrary.BatchCreateMediaItemsRequest) error {
+	batch := p.service.MediaItems.BatchCreate(req)
 	b, cancel := appendRetryPolicy.Start(ctx)
 	defer cancel()
 	for backoff.Continue(b) {
@@ -31,7 +27,7 @@ func (p *Photos) Append(ctx context.Context, albumID string, mediaItems []*photo
 		case err == nil:
 			for _, result := range res.NewMediaItemResults {
 				if result.Status.Code != 0 {
-					if mediaItem := findMediaItemByUploadToken(mediaItems, result.UploadToken); mediaItem != nil {
+					if mediaItem := findMediaItemByUploadToken(req.NewMediaItems, result.UploadToken); mediaItem != nil {
 						p.log.Printf("Skipped %s: %s (%d)", mediaItem.Description, result.Status.Message, result.Status.Code)
 					} else {
 						p.log.Printf("Error while adding files: %s (%d)", result.Status.Message, result.Status.Code)
