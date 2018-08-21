@@ -86,6 +86,7 @@ func (p *Photos) UploadFile(ctx context.Context, filepath string) (*photoslibrar
 			return nil, fmt.Errorf("Could not create a request for uploading file %s: %s", filepath, err)
 		}
 		req.Header.Add("X-Goog-Upload-File-Name", filename)
+		req.Header.Add("X-Goog-Upload-Protocol", "raw")
 
 		p.log.Printf("Uploading %s", filepath)
 		res, err := p.client.Do(req)
