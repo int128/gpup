@@ -1,0 +1,19 @@
+builds:
+  - binary: gpup
+    goos:
+      - windows
+      - darwin
+      - linux
+    goarch:
+      - amd64
+archive:
+  files:
+    - none*
+brew:
+  github:
+    owner: int128
+    name: homebrew-gpup
+  homepage: https://github.com/int128/gpup
+  description: "Upload files to your Google Photos with the new Photos Library API"
+  test: system "#{bin}/gpup --help"
+  install: bin.install "gpup"

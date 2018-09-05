@@ -16,6 +16,9 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// Set by goreleaser, see https://goreleaser.com/environment/
+var version = "1.x"
+
 type options struct {
 	NewAlbum           string `short:"n" long:"new-album" value-name:"TITLE" description:"Create an album and add files into it"`
 	OAuthMethod        string `long:"oauth-method" default:"browser" choice:"browser" choice:"cli" description:"OAuth authorization method"`
@@ -50,13 +53,16 @@ func parseOptions() (*options, []string, error) {
 	var o options
 	parser := flags.NewParser(&o, flags.HelpFlag)
 	parser.Usage = "[OPTIONS] FILE or DIRECTORY..."
-	parser.LongDescription = `
+	parser.LongDescription = fmt.Sprintf(`
+		Version %s
+
 		Setup:
 		1. Open https://console.cloud.google.com/apis/library/photoslibrary.googleapis.com/
 		2. Enable Photos Library API.
 		3. Open https://console.cloud.google.com/apis/credentials
 		4. Create an OAuth client ID where the application type is other.
-		5. Export GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET variables or set the options.`
+		5. Export GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET variables or set the options.`,
+		version)
 	args, err := parser.Parse()
 	if err != nil {
 		return nil, nil, err
