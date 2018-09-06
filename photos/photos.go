@@ -49,7 +49,7 @@ func (p *Photos) AddToLibrary(ctx context.Context, filepaths []string) error {
 	}
 	for _, chunk := range splitMediaItems(mediaItems, batchCreateSize) {
 		p.log.Printf("Adding %d file(s) to the library", len(chunk))
-		batch := &photoslibrary.BatchCreateMediaItemsRequest{NewMediaItems: mediaItems}
+		batch := &photoslibrary.BatchCreateMediaItemsRequest{NewMediaItems: chunk}
 		if err := p.BatchCreate(ctx, batch); err != nil {
 			return err
 		}
@@ -79,7 +79,7 @@ func (p *Photos) CreateAlbum(ctx context.Context, title string, filepaths []stri
 	for _, chunk := range splitMediaItems(mediaItems, batchCreateSize) {
 		p.log.Printf("Adding %d file(s) into the album %s", len(chunk), album.Title)
 		batch := &photoslibrary.BatchCreateMediaItemsRequest{
-			NewMediaItems: mediaItems,
+			NewMediaItems: chunk,
 			AlbumId:       album.Id,
 			AlbumPosition: &photoslibrary.AlbumPosition{Position: "LAST_IN_ALBUM"},
 		}
