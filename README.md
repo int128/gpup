@@ -20,7 +20,12 @@ export GOOGLE_CLIENT_ID=
 export GOOGLE_CLIENT_SECRET=
 ```
 
-Download the latest release from [releases](https://github.com/int128/gpup/releases).
+You can install this from brew tap or [releases](https://github.com/int128/gpup/releases).
+
+```sh
+brew tap int128/gpup
+brew install gpup
+```
 
 To upload files in a folder to your Google Photos library:
 
