@@ -18,20 +18,22 @@ jobs:
     working_directory: /go/src/github.com/int128/gpup
     steps:
       - checkout
-      - run: go get -v -t -d
-      - run: go get github.com/mitchellh/gox
-      - run: go get github.com/tcnksm/ghr
-      - run: gox -output 'dist/{{.Dir}}_{{.OS}}_{{.Arch}}'
-      - run: ghr -u "$CIRCLE_PROJECT_USERNAME" -r "$CIRCLE_PROJECT_REPONAME" "$CIRCLE_TAG" dist
+      - run: go get -v -t -d ./...
+      - run: curl -sL https://git.io/goreleaser | bash
 
 workflows:
   version: 2
-  build:
+  all:
     jobs:
-      - build
+      - build:
+          filters:
+            tags:
+              only: /.*/
       - release:
           filters:
             branches:
               ignore: /.*/
             tags:
               only: /.*/
+          requires:
+            - build
