@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-func generateOAuthState() (string, error) {
+func generateState() (string, error) {
 	var n uint64
 	if err := binary.Read(rand.Reader, binary.LittleEndian, &n); err != nil {
 		return "", err

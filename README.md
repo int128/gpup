@@ -37,15 +37,13 @@ $ gpup my-photos/
 2018/06/14 10:28:40 Open http://localhost:8000 for authorization
 2018/06/14 10:28:43 GET /
 2018/06/14 10:28:49 GET /?state=...&code=...
-2018/06/14 10:28:49 Storing token cache to /home/user/.gpup_token
 2018/06/14 10:28:49 Queued 2 file(s)
 2018/06/14 10:28:49 Uploading travel.jpg
 2018/06/14 10:28:49 Uploading lunch.jpg
 2018/06/14 10:28:52 Adding 2 file(s) to the library
 ```
 
-Only first time you need to open browser for authorize API access.
-`gpup` will store the token to `~/.gpup_token` and use in the next time.
+It opens the browser and you can log in to the provider.
 
 You can create a new album and upload files into the album by `-n` option.
 
@@ -69,7 +67,6 @@ Setup:
 
 Application Options:
   -n, --new-album=TITLE               Create an album and add files into it
-      --oauth-method=[browser|cli]    OAuth authorization method (default: browser)
       --google-client-id=             Google API client ID [$GOOGLE_CLIENT_ID]
       --google-client-secret=         Google API client secret [$GOOGLE_CLIENT_SECRET]
       --debug                         Enable request and response logging [$DEBUG]

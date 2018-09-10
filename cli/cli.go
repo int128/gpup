@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/int128/gpup/authz"
-	"github.com/int128/gpup/authz/cache"
+
 	"github.com/int128/gpup/debug"
 	"github.com/int128/gpup/photos"
 	flags "github.com/jessevdk/go-flags"
@@ -16,34 +16,11 @@ import (
 
 // CLI has the command options.
 type CLI struct {
-	NewAlbum           string `short:"n" long:"new-album" value-name:"TITLE" description:"Create an album and add files into it"`
-	OAuthMethod        string `long:"oauth-method" default:"browser" choice:"browser" choice:"cli" description:"OAuth authorization method"`
-	OAuthCacheFilename string `long:"oauth-cache-filename" default:"~/.gpup_token" description:"OAuth token cache filename"`
-	ClientID           string `long:"google-client-id" env:"GOOGLE_CLIENT_ID" required:"1" description:"Google API client ID"`
-	ClientSecret       string `long:"google-client-secret" env:"GOOGLE_CLIENT_SECRET" required:"1" description:"Google API client secret"`
-	Debug              bool   `long:"debug" env:"DEBUG" description:"Enable request and response logging"`
-	paths              []string
-}
-
-func (c *CLI) authzConfig() oauth2.Config {
-	return oauth2.Config{
-		ClientID:     c.ClientID,
-		ClientSecret: c.ClientSecret,
-		Endpoint:     photos.Endpoint,
-		Scopes:       photos.Scopes,
-	}
-}
-
-func (c *CLI) authzFlow() authz.Flow {
-	switch c.OAuthMethod {
-	case "browser":
-		return &authz.BrowserAuthCodeFlow{Config: c.authzConfig(), Port: 8000}
-	case "cli":
-		return &authz.CLIAuthCodeFlow{Config: c.authzConfig()}
-	default:
-		log.Fatalf("Invalid oauth-method: %s", c.OAuthMethod)
-		return nil
-	}
+	NewAlbum     string `short:"n" long:"new-album" value-name:"TITLE" description:"Create an album and add files into it"`
+	ClientID     string `long:"google-client-id" env:"GOOGLE_CLIENT_ID" required:"1" description:"Google API client ID"`
+	ClientSecret string `long:"google-client-secret" env:"GOOGLE_CLIENT_SECRET" required:"1" description:"Google API client secret"`
+	Debug        bool   `long:"debug" env:"DEBUG" description:"Enable request and response logging"`
+	paths        []string
 }
 
 // Parse command line and returns a CLI.
@@ -86,17 +63,23 @@ func (c *CLI) Run() error {
 		fmt.Printf("%3d: %s\n", i+1, file)
 	}
 
-	tokenCache, err := cache.New(c.OAuthCacheFilename, cache.Secret(c.ClientID+c.ClientSecret))
-	if err != nil {
-		return err
-	}
 	ctx := context.Background()
-	token, err := authz.GetToken(ctx, c.authzFlow(), tokenCache)
+	oauth2Config := oauth2.Config{
+		ClientID:     c.ClientID,
+		ClientSecret: c.ClientSecret,
+		Endpoint:     photos.Endpoint,
+		Scopes:       photos.Scopes,
+		RedirectURL:  "http://localhost:8000",
+	}
+	flow := authz.AuthCodeFlow{
+		Config:     &oauth2Config,
+		ServerPort: 8000,
+	}
+	token, err := flow.GetToken(ctx)
 	if err != nil {
 		return err
 	}
-	config := c.authzConfig()
-	client := config.Client(ctx, token)
+	client := oauth2Config.Client(ctx, token)
 	if err != nil {
 		return err
 	}
