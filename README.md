@@ -13,11 +13,11 @@ Setup your API access by the following steps:
 1. Enable Photos Library API.
 1. Open https://console.cloud.google.com/apis/credentials
 1. Create an OAuth client ID where the application type is other.
-1. Set the following environment variables in your shell:
+1. Create `~/.gpupconfig` with the following content:
 
-```
-export GOOGLE_CLIENT_ID=
-export GOOGLE_CLIENT_SECRET=
+```yaml
+client-id: YOUR_CLIENT_ID
+client-secret: YOUR_CLIENT_SECRET
 ```
 
 You can install this from brew tap or [releases](https://github.com/int128/gpup/releases).
@@ -37,6 +37,7 @@ $ gpup my-photos/
 2018/06/14 10:28:40 Open http://localhost:8000 for authorization
 2018/06/14 10:28:43 GET /
 2018/06/14 10:28:49 GET /?state=...&code=...
+2018/06/14 10:28:49 Saved token to ~/.gpupconfig
 2018/06/14 10:28:49 Queued 2 file(s)
 2018/06/14 10:28:49 Uploading travel.jpg
 2018/06/14 10:28:49 Uploading lunch.jpg
@@ -58,21 +59,13 @@ gpup -n "My Album" my-photos/
 Usage:
   gpup [OPTIONS] FILE or DIRECTORY...
 
-Setup:
-1. Open https://console.cloud.google.com/apis/library/photoslibrary.googleapis.com/
-2. Enable Photos Library API.
-3. Open https://console.cloud.google.com/apis/credentials
-4. Create an OAuth client ID where the application type is other.
-5. Export GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET variables or set the options.
-
 Application Options:
-  -n, --new-album=TITLE               Create an album and add files into it
-      --google-client-id=             Google API client ID [$GOOGLE_CLIENT_ID]
-      --google-client-secret=         Google API client secret [$GOOGLE_CLIENT_SECRET]
-      --debug                         Enable request and response logging [$DEBUG]
+      --gpupconfig=        Path to the config file (default: ~/.gpupconfig) [$GPUPCONFIG]
+  -n, --new-album=TITLE    Create an album and add files into it
+      --debug              Enable request and response logging [$DEBUG]
 
 Help Options:
-  -h, --help                          Show this help message
+  -h, --help               Show this help message
 ```
 
 

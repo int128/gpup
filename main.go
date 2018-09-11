@@ -11,7 +11,7 @@ import (
 var version = "1.x"
 
 func main() {
-	c, err := cli.Parse(os.Args, version)
+	c, err := cli.New(os.Args, version)
 	if err != nil {
 		log.Fatal(err)
 	}
