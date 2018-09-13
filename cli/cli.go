@@ -4,102 +4,94 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
 
-	"github.com/int128/gpup/authz"
-
-	"github.com/int128/gpup/debug"
-	"github.com/int128/gpup/photos"
 	flags "github.com/jessevdk/go-flags"
-	"golang.org/x/oauth2"
 )
 
-// CLI has the command options.
+// CLI represents input for the command.
 type CLI struct {
-	NewAlbum     string `short:"n" long:"new-album" value-name:"TITLE" description:"Create an album and add files into it"`
-	ClientID     string `long:"google-client-id" env:"GOOGLE_CLIENT_ID" required:"1" description:"Google API client ID"`
-	ClientSecret string `long:"google-client-secret" env:"GOOGLE_CLIENT_SECRET" required:"1" description:"Google API client secret"`
-	Debug        bool   `long:"debug" env:"DEBUG" description:"Enable request and response logging"`
-	paths        []string
+	ConfigName string `long:"gpupconfig" env:"GPUPCONFIG" default:"~/.gpupconfig" description:"Path to the config file"`
+	NewAlbum   string `short:"n" long:"new-album" value-name:"TITLE" description:"Create an album and add files into it"`
+	Debug      bool   `long:"debug" env:"DEBUG" description:"Enable request and response logging"`
+
+	externalConfig // default to values in the config
+
+	Paths []string
 }
 
-// Parse command line and returns a CLI.
-func Parse(osArgs []string, version string) (*CLI, error) {
-	var o CLI
-	parser := flags.NewParser(&o, flags.HelpFlag)
-	parser.Usage = "[OPTIONS] FILE or DIRECTORY..."
-	parser.LongDescription = fmt.Sprintf(`
-		Version %s
+type externalConfig struct {
+	ClientID     string       `yaml:"client-id" long:"google-client-id" env:"GOOGLE_CLIENT_ID" description:"Google API client ID"`
+	ClientSecret string       `yaml:"client-secret" long:"google-client-secret" env:"GOOGLE_CLIENT_SECRET" description:"Google API client secret"`
+	EncodedToken EncodedToken `yaml:"token" long:"google-token" env:"GOOGLE_TOKEN" description:"Google API token"`
+}
 
-		Setup:
-		1. Open https://console.cloud.google.com/apis/library/photoslibrary.googleapis.com/
-		2. Enable Photos Library API.
-		3. Open https://console.cloud.google.com/apis/credentials
-		4. Create an OAuth client ID where the application type is other.
-		5. Export GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET variables or set the options.`,
-		version)
-	args, err := parser.ParseArgs(osArgs[1:])
+// New creates a new CLI object.
+//
+// This does the followings:
+// - Determine path to the config
+// - Read the config
+// - Parse the arguments
+// - Validate
+//
+// If the config is invalid, it will be ignored.
+func New(osArgs []string, version string) (*CLI, error) {
+	var c CLI
+	parser := flags.NewParser(&c, flags.HelpFlag)
+	parser.Usage = "[OPTIONS] FILE or DIRECTORY..."
+	parser.LongDescription = fmt.Sprintf("Version %s", version)
+	if _, err := parser.ParseArgs(osArgs[1:]); err != nil {
+		return nil, err
+	}
+	if err := readConfig(c.ConfigName, &c.externalConfig); err != nil {
+		log.Printf("Skip reading %s: %s", c.ConfigName, err)
+	}
+	var err error
+	c.Paths, err = parser.ParseArgs(osArgs[1:])
 	if err != nil {
 		return nil, err
 	}
-	if len(args) == 0 {
-		return nil, fmt.Errorf("Too few argument")
-	}
-	o.paths = args
-	return &o, nil
+	return &c, nil
 }
 
 // Run runs the command.
-func (c *CLI) Run() error {
-	files, err := findFiles(c.paths)
-	if err != nil {
-		return err
-	}
-	if len(files) == 0 {
-		return fmt.Errorf("File not found in %s", strings.Join(c.paths, ", "))
-	}
-	log.Printf("The following %d files will be uploaded:", len(files))
-	for i, file := range files {
-		fmt.Printf("%3d: %s\n", i+1, file)
-	}
-
-	ctx := context.Background()
-	oauth2Config := oauth2.Config{
-		ClientID:     c.ClientID,
-		ClientSecret: c.ClientSecret,
-		Endpoint:     photos.Endpoint,
-		Scopes:       photos.Scopes,
-		RedirectURL:  "http://localhost:8000",
-	}
-	flow := authz.AuthCodeFlow{
-		Config:     &oauth2Config,
-		ServerPort: 8000,
-	}
-	token, err := flow.GetToken(ctx)
-	if err != nil {
-		return err
-	}
-	client := oauth2Config.Client(ctx, token)
-	if err != nil {
-		return err
-	}
-	if c.Debug {
-		client = debug.NewClient(client)
-	}
-
-	service, err := photos.New(client)
-	if err != nil {
-		return err
-	}
-	if c.NewAlbum != "" {
-		_, err := service.CreateAlbum(ctx, c.NewAlbum, files)
-		if err != nil {
-			return err
-		}
-	} else {
-		if err := service.AddToLibrary(ctx, files); err != nil {
+func (c *CLI) Run(ctx context.Context) error {
+	if c.ClientID == "" || c.ClientSecret == "" {
+		if err := c.initialSetup(ctx); err != nil {
 			return err
 		}
 	}
+	switch {
+	case len(c.Paths) == 0:
+		return fmt.Errorf("Nothing to upload")
+	case c.NewAlbum != "":
+		return c.createAlbum(ctx)
+	default:
+		return c.addToLibrary(ctx)
+	}
+}
+
+func (c *CLI) initialSetup(ctx context.Context) error {
+	log.Printf(`Setup your API access by the following steps:
+
+1. Open https://console.cloud.google.com/apis/library/photoslibrary.googleapis.com/
+1. Enable Photos Library API.
+1. Open https://console.cloud.google.com/apis/credentials
+1. Create an OAuth client ID where the application type is other.
+
+`)
+	fmt.Printf("Enter your OAuth client ID (e.g. xxx.apps.googleusercontent.com): ")
+	fmt.Scanln(&c.externalConfig.ClientID)
+	if c.externalConfig.ClientID == "" {
+		return fmt.Errorf("OAuth client ID must not be empty")
+	}
+	fmt.Printf("Enter your OAuth client secret: ")
+	fmt.Scanln(&c.externalConfig.ClientSecret)
+	if c.externalConfig.ClientSecret == "" {
+		return fmt.Errorf("OAuth client ID must not be empty")
+	}
+	if err := writeConfig(c.ConfigName, &c.externalConfig); err != nil {
+		return fmt.Errorf("Could not save credentials to %s: %s", c.ConfigName, err)
+	}
+	log.Printf("Saved credentials to %s", c.ConfigName)
 	return nil
 }
