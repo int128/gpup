@@ -7,24 +7,35 @@ This depends on the official [Google Photos Library API](https://developers.goog
 
 ## Getting Started
 
+You can install this from brew tap or [releases](https://github.com/int128/gpup/releases).
+
+```sh
+brew tap int128/gpup
+brew install gpup
+```
+
 Setup your API access by the following steps:
 
 1. Open https://console.cloud.google.com/apis/library/photoslibrary.googleapis.com/
 1. Enable Photos Library API.
 1. Open https://console.cloud.google.com/apis/credentials
 1. Create an OAuth client ID where the application type is other.
-1. Create `~/.gpupconfig` with the following content:
+1. Run `gpup` and follow the instruction as follows.
 
-```yaml
-client-id: YOUR_CLIENT_ID
-client-secret: YOUR_CLIENT_SECRET
 ```
+% gpup
+2018/09/13 15:38:13 Skip reading ~/.gpupconfig: Could not open ~/.gpupconfig: open /user/.gpupconfig: no such file or directory
+2018/09/13 15:38:13 Setup your API access by the following steps:
 
-You can install this from brew tap or [releases](https://github.com/int128/gpup/releases).
+1. Open https://console.cloud.google.com/apis/library/photoslibrary.googleapis.com/
+1. Enable Photos Library API.
+1. Open https://console.cloud.google.com/apis/credentials
+1. Create an OAuth client ID where the application type is other.
 
-```sh
-brew tap int128/gpup
-brew install gpup
+Enter your OAuth client ID (e.g. xxx.apps.googleusercontent.com): YOUR_CLIENT_ID.apps.googleusercontent.com
+Enter your OAuth client secret: YOUR_CLIENT_SECRET
+2018/09/13 15:38:22 Saved credentials to ~/.gpupconfig
+2018/09/13 15:38:22 Error: Nothing to upload
 ```
 
 To upload files in a folder to your Google Photos library:
@@ -60,12 +71,15 @@ Usage:
   gpup [OPTIONS] FILE or DIRECTORY...
 
 Application Options:
-      --gpupconfig=        Path to the config file (default: ~/.gpupconfig) [$GPUPCONFIG]
-  -n, --new-album=TITLE    Create an album and add files into it
-      --debug              Enable request and response logging [$DEBUG]
+      --gpupconfig=              Path to the config file (default: ~/.gpupconfig) [$GPUPCONFIG]
+  -n, --new-album=TITLE          Create an album and add files into it
+      --debug                    Enable request and response logging [$DEBUG]
+      --google-client-id=        Google API client ID [$GOOGLE_CLIENT_ID]
+      --google-client-secret=    Google API client secret [$GOOGLE_CLIENT_SECRET]
+      --google-token=            Google API token [$GOOGLE_TOKEN]
 
 Help Options:
-  -h, --help               Show this help message
+  -h, --help                     Show this help message
 ```
 
 

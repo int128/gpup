@@ -11,30 +11,6 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-func (c *externalConfig) GetToken() (*oauth2.Token, error) {
-	if c.EncodedToken == "" {
-		return nil, nil
-	}
-	b, err := base64.StdEncoding.DecodeString(c.EncodedToken)
-	if err != nil {
-		return nil, fmt.Errorf("Invalid base64: %s", err)
-	}
-	var token oauth2.Token
-	if err := json.Unmarshal(b, &token); err != nil {
-		return nil, fmt.Errorf("Invalid json: %s", err)
-	}
-	return &token, nil
-}
-
-func (c *externalConfig) SetToken(token *oauth2.Token) error {
-	b, err := json.Marshal(token)
-	if err != nil {
-		return fmt.Errorf("Could not encode: %s", err)
-	}
-	c.EncodedToken = base64.StdEncoding.EncodeToString(b)
-	return nil
-}
-
 func readConfig(name string, c *externalConfig) error {
 	p, err := homedir.Expand(name)
 	if err != nil {
@@ -67,4 +43,32 @@ func writeConfig(name string, c *externalConfig) error {
 		return fmt.Errorf("Could not write to YAML: %s", err)
 	}
 	return nil
+}
+
+// EncodedToken is a base64 encoded json of token.
+type EncodedToken string
+
+// Decode returns the token object.
+func (t EncodedToken) Decode() (*oauth2.Token, error) {
+	if t == "" {
+		return nil, nil
+	}
+	b, err := base64.StdEncoding.DecodeString(string(t))
+	if err != nil {
+		return nil, fmt.Errorf("Invalid base64: %s", err)
+	}
+	var token oauth2.Token
+	if err := json.Unmarshal(b, &token); err != nil {
+		return nil, fmt.Errorf("Invalid json: %s", err)
+	}
+	return &token, nil
+}
+
+// EncodeToken returns an EncodedToken.
+func EncodeToken(token *oauth2.Token) (EncodedToken, error) {
+	b, err := json.Marshal(token)
+	if err != nil {
+		return "", fmt.Errorf("Could not encode: %s", err)
+	}
+	return EncodedToken(base64.StdEncoding.EncodeToString(b)), nil
 }
