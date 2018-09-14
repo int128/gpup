@@ -23,6 +23,11 @@ func (c *CLI) newClient(ctx context.Context) (*http.Client, error) {
 		Scopes:       photos.Scopes,
 		RedirectURL:  "http://localhost:8000",
 	}
+	if c.Debug {
+		ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{
+			Transport: loggingTransport{http.DefaultTransport},
+		})
+	}
 	if token == nil {
 		flow := authz.AuthCodeFlow{
 			Config:     &oauth2Config,
@@ -48,7 +53,7 @@ func (c *CLI) newClient(ctx context.Context) (*http.Client, error) {
 		return nil, err
 	}
 	if c.Debug {
-		client = wrapLoggingClient(client)
+		client.Transport = loggingTransport{client.Transport}
 	}
 	return client, nil
 }
