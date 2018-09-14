@@ -1,8 +1,10 @@
 # gpup [![CircleCI](https://circleci.com/gh/int128/gpup.svg?style=shield)](https://circleci.com/gh/int128/gpup)
 
-`gpup` is a command to upload files to your Google Photos library or album.
+A command to upload files to your Google Photos Library that has the following features.
 
-This depends on the official [Google Photos Library API](https://developers.google.com/photos/library/guides/get-started).
+- Depend on the official [Google Photos Library API](https://developers.google.com/photos/library/guides/get-started).
+- Add files to the library or album.
+- Create an album if it does not exist.
 
 
 ## Getting Started
@@ -57,7 +59,14 @@ $ gpup my-photos/
 
 It opens the browser and you can log in to the provider.
 
-You can create a new album and upload files into the album by `-n` option.
+You can upload files to the album by `-a` option.
+If the album does not exist, it will be created.
+
+```sh
+gpup -a "My Album" my-photos/
+```
+
+You can upload files to a new album by `-n` option.
 
 ```sh
 gpup -n "My Album" my-photos/
@@ -71,8 +80,9 @@ Usage:
   gpup [OPTIONS] FILE or DIRECTORY...
 
 Application Options:
+  -a, --album=TITLE              Add files to the album or a new album if it does not exist
+  -n, --new-album=TITLE          Add files to a new album
       --gpupconfig=              Path to the config file (default: ~/.gpupconfig) [$GPUPCONFIG]
-  -n, --new-album=TITLE          Create an album and add files into it
       --debug                    Enable request and response logging [$DEBUG]
 
 Options read from gpupconfig:
