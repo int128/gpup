@@ -13,7 +13,11 @@ func (c *CLI) upload(ctx context.Context) error {
 	if len(c.Paths) == 0 {
 		return fmt.Errorf("Nothing to upload")
 	}
-	files, err := findFiles(c.Paths)
+	client, err := c.newClient(ctx)
+	if err != nil {
+		return err
+	}
+	files, err := findFiles(c.Paths, client)
 	if err != nil {
 		return err
 	}
@@ -25,15 +29,10 @@ func (c *CLI) upload(ctx context.Context) error {
 		fmt.Printf("%3d: %s\n", i+1, file)
 	}
 
-	client, err := c.newClient(ctx)
-	if err != nil {
-		return err
-	}
 	service, err := photos.New(client)
 	if err != nil {
 		return err
 	}
-
 	switch {
 	case c.AlbumTitle != "":
 		return service.AddToAlbum(ctx, c.AlbumTitle, files)

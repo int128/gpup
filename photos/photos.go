@@ -42,7 +42,7 @@ func New(client *http.Client) (*Photos, error) {
 // AddToLibrary adds the files to the library.
 // This method tries uploading all files and ignores any error.
 // If no file could be uploaded, this method returns an error.
-func (p *Photos) AddToLibrary(ctx context.Context, filepaths []string) error {
+func (p *Photos) AddToLibrary(ctx context.Context, filepaths []Media) error {
 	mediaItems := p.UploadFiles(ctx, filepaths)
 	if len(mediaItems) == 0 {
 		return fmt.Errorf("Could not upload any file")
@@ -60,7 +60,7 @@ func (p *Photos) AddToLibrary(ctx context.Context, filepaths []string) error {
 // AddToAlbum adds the files to the album.
 // This method tries uploading all files and ignores any error.
 // If no file could be uploaded, this method returns an error.
-func (p *Photos) AddToAlbum(ctx context.Context, title string, filepaths []string) error {
+func (p *Photos) AddToAlbum(ctx context.Context, title string, filepaths []Media) error {
 	p.log.Printf("Finding album %s", title)
 	album, err := p.FindAlbumByTitle(ctx, title)
 	if err != nil {
@@ -100,7 +100,7 @@ func (p *Photos) AddToAlbum(ctx context.Context, title string, filepaths []strin
 // CreateAlbum creates an album with the files.
 // This method tries uploading all files and ignores any error.
 // If no file could be uploaded, this method returns an error.
-func (p *Photos) CreateAlbum(ctx context.Context, title string, filepaths []string) (*photoslibrary.Album, error) {
+func (p *Photos) CreateAlbum(ctx context.Context, title string, filepaths []Media) (*photoslibrary.Album, error) {
 	mediaItems := p.UploadFiles(ctx, filepaths)
 	if len(mediaItems) == 0 {
 		return nil, fmt.Errorf("Could not upload any file")

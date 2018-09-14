@@ -45,8 +45,8 @@ To upload files in a folder to your Google Photos library:
 ```
 $ gpup my-photos/
 2018/06/14 10:28:40 The following 2 files will be uploaded:
-  1: travel.jpg
-  2: lunch.jpg
+  1: my-photos/travel.jpg
+  2: my-photos/lunch.jpg
 2018/06/14 10:28:40 Open http://localhost:8000 for authorization
 2018/06/14 10:28:43 GET /
 2018/06/14 10:28:49 GET /?state=...&code=...
@@ -72,12 +72,18 @@ You can upload files to a new album by `-n` option.
 gpup -n "My Album" my-photos/
 ```
 
+You can upload URLs as well.
+
+```sh
+gpup https://www.example.com/image.jpg
+```
+
 
 ## Usage
 
 ```
 Usage:
-  gpup [OPTIONS] FILE or DIRECTORY...
+  gpup [OPTIONS] <FILE | DIRECTORY | URL>...
 
 Application Options:
   -a, --album=TITLE              Add files to the album or a new album if it does not exist

@@ -3,7 +3,9 @@ package photos
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"path"
@@ -25,11 +27,66 @@ var uploadRetryPolicy = backoff.NewExponential(
 const apiVersion = "v1"
 const basePath = "https://photoslibrary.googleapis.com/"
 
+// Media represents an uploadable media.
+type Media interface {
+	// Open returns a stream.
+	// Caller should close it finally.
+	Open() (io.ReadCloser, error)
+	// Name returns the filename.
+	Name() string
+	// String returns the full name, e.g. path or URL.
+	String() string
+}
+
+// FileMedia represents a local file.
+type FileMedia string
+
+// Open returns a stream.
+// Caller should close it finally.
+func (m FileMedia) Open() (io.ReadCloser, error) {
+	return os.Open(m.String())
+}
+
+// Name returns the filename.
+func (m FileMedia) Name() string {
+	return path.Base(m.String())
+}
+
+func (m FileMedia) String() string {
+	return string(m)
+}
+
+// HTTPMedia represents a remote file.
+type HTTPMedia struct {
+	Client  *http.Client
+	Request *http.Request
+}
+
+// Open returns a stream.
+// Caller should close it finally.
+func (m *HTTPMedia) Open() (io.ReadCloser, error) {
+	r, err := m.Client.Do(m.Request)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("Downloading %s", m.Request.URL)
+	return r.Body, nil
+}
+
+// Name returns the filename.
+func (m *HTTPMedia) Name() string {
+	return path.Base(m.Request.URL.Path)
+}
+
+func (m *HTTPMedia) String() string {
+	return m.Request.URL.String()
+}
+
 // UploadFiles uploads the files.
 // This method tries uploading all files and ignores any error.
 // If no file could be uploaded, this method returns an empty array.
-func (p *Photos) UploadFiles(ctx context.Context, filepaths []string) []*photoslibrary.NewMediaItem {
-	uploadQueue := make(chan string, len(filepaths))
+func (p *Photos) UploadFiles(ctx context.Context, filepaths []Media) []*photoslibrary.NewMediaItem {
+	uploadQueue := make(chan Media, len(filepaths))
 	for _, filepath := range filepaths {
 		uploadQueue <- filepath
 	}
@@ -54,7 +111,7 @@ func (p *Photos) UploadFiles(ctx context.Context, filepaths []string) []*photosl
 	return mediaItems
 }
 
-func (p *Photos) uploadWorker(ctx context.Context, uploadQueue chan string, aggregateQueue chan *photoslibrary.NewMediaItem, workerGroup *sync.WaitGroup) {
+func (p *Photos) uploadWorker(ctx context.Context, uploadQueue chan Media, aggregateQueue chan *photoslibrary.NewMediaItem, workerGroup *sync.WaitGroup) {
 	defer workerGroup.Done()
 	for filepath := range uploadQueue {
 		mediaItem, err := p.UploadFile(ctx, filepath)
@@ -70,12 +127,11 @@ func (p *Photos) uploadWorker(ctx context.Context, uploadQueue chan string, aggr
 // It returns an upload token. You can append it to the library by `Append()`.
 // It will retry uploading if status code is 5xx or network error occurs.
 // See https://developers.google.com/photos/library/guides/best-practices#retrying-failed-requests
-func (p *Photos) UploadFile(ctx context.Context, filepath string) (*photoslibrary.NewMediaItem, error) {
-	filename := path.Base(filepath)
+func (p *Photos) UploadFile(ctx context.Context, filepath Media) (*photoslibrary.NewMediaItem, error) {
 	b, cancel := uploadRetryPolicy.Start(ctx)
 	defer cancel()
 	for backoff.Continue(b) {
-		r, err := os.Open(filepath)
+		r, err := filepath.Open()
 		if err != nil {
 			return nil, fmt.Errorf("Could not open file %s: %s", filepath, err)
 		}
@@ -85,10 +141,10 @@ func (p *Photos) UploadFile(ctx context.Context, filepath string) (*photoslibrar
 		if err != nil {
 			return nil, fmt.Errorf("Could not create a request for uploading file %s: %s", filepath, err)
 		}
-		req.Header.Add("X-Goog-Upload-File-Name", filename)
+		req.Header.Add("X-Goog-Upload-File-Name", filepath.Name())
 		req.Header.Add("X-Goog-Upload-Protocol", "raw")
 
-		p.log.Printf("Uploading %s", filepath)
+		p.log.Printf("Uploading %s", filepath.Name())
 		res, err := p.client.Do(req)
 		if err != nil {
 			p.log.Printf("Error while uploading %s: %s", filepath, err)
@@ -106,7 +162,7 @@ func (p *Photos) UploadFile(ctx context.Context, filepath string) (*photoslibrar
 		switch {
 		case res.StatusCode == 200:
 			return &photoslibrary.NewMediaItem{
-				Description:     filename,
+				Description:     filepath.Name(),
 				SimpleMediaItem: &photoslibrary.SimpleMediaItem{UploadToken: body},
 			}, nil
 		case IsRetryableStatusCode(res.StatusCode):

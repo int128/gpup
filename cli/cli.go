@@ -33,7 +33,7 @@ type CLI struct {
 func New(osArgs []string, version string) (*CLI, error) {
 	var c CLI
 	parser := flags.NewParser(&c, flags.HelpFlag)
-	parser.Usage = "[OPTIONS] FILE or DIRECTORY..."
+	parser.Usage = "[OPTIONS] <FILE | DIRECTORY | URL>..."
 	parser.LongDescription = fmt.Sprintf("Version %s", version)
 	if _, err := parser.ParseArgs(osArgs[1:]); err != nil {
 		return nil, err

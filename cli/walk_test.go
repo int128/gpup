@@ -2,6 +2,7 @@ package cli
 
 import (
 	"io/ioutil"
+	"net/http"
 	"os"
 	"testing"
 )
@@ -38,13 +39,13 @@ func TestFindFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	files, err := findFiles([]string{"."})
+	files, err := findFiles([]string{"."}, http.DefaultClient)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for i, expect := range expects {
-		if files[i] != expect {
+		if files[i].String() != expect {
 			t.Errorf("files[%d] wants %s but %s", i, expect, files[0])
 		}
 	}
