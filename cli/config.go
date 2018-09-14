@@ -11,7 +11,15 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-func readConfig(name string, c *externalConfig) error {
+// ExternalConfig represents items in gpupconfig.
+type ExternalConfig struct {
+	ClientID     string       `yaml:"client-id" long:"google-client-id" env:"GOOGLE_CLIENT_ID" description:"Google API client ID"`
+	ClientSecret string       `yaml:"client-secret" long:"google-client-secret" env:"GOOGLE_CLIENT_SECRET" description:"Google API client secret"`
+	EncodedToken EncodedToken `yaml:"token" long:"google-token" env:"GOOGLE_TOKEN" description:"Google API token"`
+}
+
+// Read parses the YAML file.
+func (c *ExternalConfig) Read(name string) error {
 	p, err := homedir.Expand(name)
 	if err != nil {
 		return fmt.Errorf("Could not expand %s: %s", name, err)
@@ -28,7 +36,8 @@ func readConfig(name string, c *externalConfig) error {
 	return nil
 }
 
-func writeConfig(name string, c *externalConfig) error {
+// Write writes the items to the YAML file.
+func (c *ExternalConfig) Write(name string) error {
 	p, err := homedir.Expand(name)
 	if err != nil {
 		return fmt.Errorf("Could not expand %s: %s", name, err)

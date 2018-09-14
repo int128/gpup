@@ -12,13 +12,13 @@ import (
 )
 
 func (c *CLI) newClient(ctx context.Context) (*http.Client, error) {
-	token, err := c.EncodedToken.Decode()
+	token, err := c.ExternalConfig.EncodedToken.Decode()
 	if err != nil {
 		return nil, fmt.Errorf("Invalid config: %s", err)
 	}
 	oauth2Config := oauth2.Config{
-		ClientID:     c.ClientID,
-		ClientSecret: c.ClientSecret,
+		ClientID:     c.ExternalConfig.ClientID,
+		ClientSecret: c.ExternalConfig.ClientSecret,
 		Endpoint:     photos.Endpoint,
 		Scopes:       photos.Scopes,
 		RedirectURL:  "http://localhost:8000",
@@ -37,11 +37,11 @@ func (c *CLI) newClient(ctx context.Context) (*http.Client, error) {
 		if err != nil {
 			return nil, err
 		}
-		c.EncodedToken, err = EncodeToken(token)
+		c.ExternalConfig.EncodedToken, err = EncodeToken(token)
 		if err != nil {
 			return nil, err
 		}
-		if err := writeConfig(c.ConfigName, &c.externalConfig); err != nil {
+		if err := c.ExternalConfig.Write(c.ConfigName); err != nil {
 			return nil, fmt.Errorf("Could not write token to %s: %s", c.ConfigName, err)
 		}
 		log.Printf("Saved token to %s", c.ConfigName)

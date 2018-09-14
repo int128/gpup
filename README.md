@@ -74,6 +74,8 @@ Application Options:
       --gpupconfig=              Path to the config file (default: ~/.gpupconfig) [$GPUPCONFIG]
   -n, --new-album=TITLE          Create an album and add files into it
       --debug                    Enable request and response logging [$DEBUG]
+
+Options read from gpupconfig:
       --google-client-id=        Google API client ID [$GOOGLE_CLIENT_ID]
       --google-client-secret=    Google API client secret [$GOOGLE_CLIENT_SECRET]
       --google-token=            Google API token [$GOOGLE_TOKEN]
