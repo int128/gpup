@@ -3,50 +3,28 @@ package cli
 import (
 	"log"
 	"net/http"
-	"os"
+	"net/http/httputil"
 )
-
-func wrapLoggingClient(client *http.Client) *http.Client {
-	return &http.Client{
-		Jar:     client.Jar,
-		Timeout: client.Timeout,
-		Transport: &loggingTransport{
-			transport: client.Transport,
-			log:       log.New(os.Stdout, "", log.LstdFlags),
-		},
-	}
-}
 
 type loggingTransport struct {
 	transport http.RoundTripper
-	log       *log.Logger
 }
 
 func (t loggingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	t.logRequest(req)
-	res, err := t.transport.RoundTrip(req)
-	t.logResponse(res)
-	return res, err
-}
-
-func (t loggingTransport) logRequest(req *http.Request) {
 	if req != nil {
-		t.log.Printf("<- %s %s", req.Method, req.URL)
-		for key, values := range req.Header {
-			for _, value := range values {
-				t.log.Printf("<- %s: %s", key, value)
-			}
+		dump, err := httputil.DumpRequestOut(req, false)
+		if err != nil {
+			log.Printf("Could not dump request: %s", err)
 		}
+		log.Printf("[REQUEST] %s %s\n%s", req.Method, req.URL, string(dump))
 	}
-}
-
-func (t loggingTransport) logResponse(res *http.Response) {
+	res, err := t.transport.RoundTrip(req)
 	if res != nil {
-		t.log.Printf("-> %s %s", res.Proto, res.Status)
-		for key, values := range res.Header {
-			for _, value := range values {
-				t.log.Printf("-> %s: %s", key, value)
-			}
+		dump, err := httputil.DumpResponse(res, false)
+		if err != nil {
+			log.Printf("Could not dump response: %s", err)
 		}
+		log.Printf("[RESPONSE] %s %s\n%s", req.Method, req.URL, string(dump))
 	}
+	return res, err
 }
