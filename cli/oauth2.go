@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/int128/gpup/authz"
-	"github.com/int128/gpup/debug"
 	"github.com/int128/gpup/photos"
 	"golang.org/x/oauth2"
 )
@@ -49,7 +48,7 @@ func (c *CLI) newClient(ctx context.Context) (*http.Client, error) {
 		return nil, err
 	}
 	if c.Debug {
-		client = debug.NewClient(client)
+		client = wrapLoggingClient(client)
 	}
 	return client, nil
 }

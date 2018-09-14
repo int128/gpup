@@ -1,4 +1,4 @@
-package debug
+package cli
 
 import (
 	"log"
@@ -6,8 +6,7 @@ import (
 	"os"
 )
 
-// NewClient returns a client with request and response logging.
-func NewClient(client *http.Client) *http.Client {
+func wrapLoggingClient(client *http.Client) *http.Client {
 	return &http.Client{
 		Jar:     client.Jar,
 		Timeout: client.Timeout,
