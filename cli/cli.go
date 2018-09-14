@@ -10,8 +10,10 @@ import (
 
 // CLI represents input for the command.
 type CLI struct {
+	AlbumTitle string `short:"a" long:"album" value-name:"TITLE" description:"Add files to the album or a new album if it does not exist"`
+	NewAlbum   string `short:"n" long:"new-album" value-name:"TITLE" description:"Add files to a new album"`
+
 	ConfigName string `long:"gpupconfig" env:"GPUPCONFIG" default:"~/.gpupconfig" description:"Path to the config file"`
-	NewAlbum   string `short:"n" long:"new-album" value-name:"TITLE" description:"Create an album and add files into it"`
 	Debug      bool   `long:"debug" env:"DEBUG" description:"Enable request and response logging"`
 
 	ExternalConfig ExternalConfig `group:"Options read from gpupconfig"`
@@ -54,14 +56,7 @@ func (c *CLI) Run(ctx context.Context) error {
 			return err
 		}
 	}
-	switch {
-	case len(c.Paths) == 0:
-		return fmt.Errorf("Nothing to upload")
-	case c.NewAlbum != "":
-		return c.createAlbum(ctx)
-	default:
-		return c.addToLibrary(ctx)
-	}
+	return c.upload(ctx)
 }
 
 func (c *CLI) initialSetup(ctx context.Context) error {

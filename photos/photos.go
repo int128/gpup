@@ -35,7 +35,7 @@ func New(client *http.Client) (*Photos, error) {
 	return &Photos{
 		client:  client,
 		service: service,
-		log:     log.New(os.Stdout, "", log.LstdFlags),
+		log:     log.New(os.Stderr, "", log.LstdFlags),
 	}, nil
 }
 
@@ -50,6 +50,46 @@ func (p *Photos) AddToLibrary(ctx context.Context, filepaths []string) error {
 	for _, chunk := range splitMediaItems(mediaItems, batchCreateSize) {
 		p.log.Printf("Adding %d file(s) to the library", len(chunk))
 		batch := &photoslibrary.BatchCreateMediaItemsRequest{NewMediaItems: chunk}
+		if err := p.BatchCreate(ctx, batch); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// AddToAlbum adds the files to the album.
+// This method tries uploading all files and ignores any error.
+// If no file could be uploaded, this method returns an error.
+func (p *Photos) AddToAlbum(ctx context.Context, title string, filepaths []string) error {
+	p.log.Printf("Finding album %s", title)
+	album, err := p.FindAlbumByTitle(ctx, title)
+	if err != nil {
+		return fmt.Errorf("Could not list albums: %s", err)
+	}
+	if album == nil {
+		p.log.Printf("Creating album %s", title)
+		created, err := p.service.Albums.Create(&photoslibrary.CreateAlbumRequest{
+			Album: &photoslibrary.Album{
+				Title: title,
+			},
+		}).Do()
+		if err != nil {
+			return fmt.Errorf("Error while creating an album: %s", err)
+		}
+		album = created
+	}
+
+	mediaItems := p.UploadFiles(ctx, filepaths)
+	if len(mediaItems) == 0 {
+		return fmt.Errorf("Could not upload any file")
+	}
+	for _, chunk := range splitMediaItems(mediaItems, batchCreateSize) {
+		p.log.Printf("Adding %d file(s) to the album", len(chunk))
+		batch := &photoslibrary.BatchCreateMediaItemsRequest{
+			NewMediaItems: chunk,
+			AlbumId:       album.Id,
+			AlbumPosition: &photoslibrary.AlbumPosition{Position: "LAST_IN_ALBUM"},
+		}
 		if err := p.BatchCreate(ctx, batch); err != nil {
 			return err
 		}
