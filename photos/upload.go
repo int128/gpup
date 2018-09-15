@@ -69,7 +69,11 @@ func (m *HTTPMediaItem) Open() (io.ReadCloser, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Downloading %s", m.Request.URL)
+	if r.StatusCode < 200 || r.StatusCode > 299 {
+		r.Body.Close()
+		return nil, fmt.Errorf("Got %s", r.Status)
+	}
+	log.Printf("%s %s", r.Status, m.Request.URL)
 	return r.Body, nil
 }
 
