@@ -57,6 +57,14 @@ func (c *CLI) findMediaItems() ([]photos.MediaItem, error) {
 			if err != nil {
 				return nil, fmt.Errorf("Could not parse URL: %s", err)
 			}
+			if c.RequestBasicAuth != "" {
+				kv := strings.SplitN(c.RequestBasicAuth, ":", 2)
+				r.SetBasicAuth(kv[0], kv[1])
+			}
+			for _, header := range c.RequestHeaders {
+				kv := strings.SplitN(header, ":", 2)
+				r.Header.Add(strings.TrimSpace(kv[0]), strings.TrimSpace(kv[1]))
+			}
 			mediaItems = append(mediaItems, &photos.HTTPMediaItem{
 				Client:  client,
 				Request: r,

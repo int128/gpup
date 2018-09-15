@@ -10,8 +10,10 @@ import (
 
 // CLI represents input for the command.
 type CLI struct {
-	AlbumTitle string `short:"a" long:"album" value-name:"TITLE" description:"Add files to the album or a new album if it does not exist"`
-	NewAlbum   string `short:"n" long:"new-album" value-name:"TITLE" description:"Add files to a new album"`
+	AlbumTitle       string   `short:"a" long:"album" value-name:"TITLE" description:"Add files to the album or a new album if it does not exist"`
+	NewAlbum         string   `short:"n" long:"new-album" value-name:"TITLE" description:"Add files to a new album"`
+	RequestHeaders   []string `long:"request-header" value-name:"KEY:VALUE" description:"Add the header on fetching URLs"`
+	RequestBasicAuth string   `long:"request-auth" value-name:"USER:PASS" description:"Add the basic auth header on fetching URLs"`
 
 	ConfigName string `long:"gpupconfig" env:"GPUPCONFIG" default:"~/.gpupconfig" description:"Path to the config file"`
 	Debug      bool   `long:"debug" env:"DEBUG" description:"Enable request and response logging"`
