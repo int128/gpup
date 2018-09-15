@@ -2,7 +2,6 @@ package cli
 
 import (
 	"io/ioutil"
-	"net/http"
 	"os"
 	"testing"
 )
@@ -39,7 +38,8 @@ func TestFindMediaItems(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	files, err := findMediaItems([]string{"."}, http.DefaultClient)
+	c := CLI{Paths: []string{"."}}
+	files, err := c.findMediaItems()
 	if err != nil {
 		t.Fatal(err)
 	}

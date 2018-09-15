@@ -12,7 +12,14 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func (c *CLI) newClient(ctx context.Context) (*http.Client, error) {
+func (c *CLI) newHTTPClient() *http.Client {
+	if c.Debug {
+		return &http.Client{Transport: loggingTransport{http.DefaultTransport}}
+	}
+	return http.DefaultClient
+}
+
+func (c *CLI) newOAuth2Client(ctx context.Context) (*http.Client, error) {
 	token, err := c.ExternalConfig.EncodedToken.Decode()
 	if err != nil {
 		return nil, fmt.Errorf("Invalid config: %s", err)
@@ -24,11 +31,7 @@ func (c *CLI) newClient(ctx context.Context) (*http.Client, error) {
 		Scopes:       photos.Scopes,
 		RedirectURL:  "http://localhost:8000",
 	}
-	if c.Debug {
-		ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{
-			Transport: loggingTransport{http.DefaultTransport},
-		})
-	}
+	ctx = context.WithValue(ctx, oauth2.HTTPClient, c.newHTTPClient())
 	if token == nil {
 		flow := authz.AuthCodeFlow{
 			Config:     &oauth2Config,
