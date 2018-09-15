@@ -39,7 +39,7 @@ func TestFindFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	files, err := findFiles([]string{"."}, http.DefaultClient)
+	files, err := findMediaItems([]string{"."}, http.DefaultClient)
 	if err != nil {
 		t.Fatal(err)
 	}

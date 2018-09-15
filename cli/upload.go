@@ -17,16 +17,16 @@ func (c *CLI) upload(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	files, err := findFiles(c.Paths, client)
+	mediaItems, err := findMediaItems(c.Paths, client)
 	if err != nil {
 		return err
 	}
-	if len(files) == 0 {
-		return fmt.Errorf("File not found in %s", strings.Join(c.Paths, ", "))
+	if len(mediaItems) == 0 {
+		return fmt.Errorf("Nothing to upload in %s", strings.Join(c.Paths, ", "))
 	}
-	log.Printf("The following %d files will be uploaded:", len(files))
-	for i, file := range files {
-		fmt.Printf("%3d: %s\n", i+1, file)
+	log.Printf("The following %d items will be uploaded:", len(mediaItems))
+	for i, mediaItem := range mediaItems {
+		fmt.Printf("%3d: %s\n", i+1, mediaItem)
 	}
 
 	service, err := photos.New(client)
@@ -35,11 +35,11 @@ func (c *CLI) upload(ctx context.Context) error {
 	}
 	switch {
 	case c.AlbumTitle != "":
-		return service.AddToAlbum(ctx, c.AlbumTitle, files)
+		return service.AddToAlbum(ctx, c.AlbumTitle, mediaItems)
 	case c.NewAlbum != "":
-		_, err = service.CreateAlbum(ctx, c.NewAlbum, files)
+		_, err = service.CreateAlbum(ctx, c.NewAlbum, mediaItems)
 		return err
 	default:
-		return service.AddToLibrary(ctx, files)
+		return service.AddToLibrary(ctx, mediaItems)
 	}
 }

@@ -19,7 +19,7 @@ var Endpoint = google.Endpoint
 // Scopes is a set of OAuth scopes.
 var Scopes = []string{photoslibrary.PhotoslibraryScope}
 
-// Photos provides service for manage albums and uploading files.
+// Photos provides service for manage albums and uploading media items.
 type Photos struct {
 	client  *http.Client
 	service *photoslibrary.Service
@@ -39,16 +39,16 @@ func New(client *http.Client) (*Photos, error) {
 	}, nil
 }
 
-// AddToLibrary adds the files to the library.
-// This method tries uploading all files and ignores any error.
-// If no file could be uploaded, this method returns an error.
-func (p *Photos) AddToLibrary(ctx context.Context, filepaths []Media) error {
-	mediaItems := p.UploadFiles(ctx, filepaths)
-	if len(mediaItems) == 0 {
-		return fmt.Errorf("Could not upload any file")
+// AddToLibrary adds the items to the library.
+// This method tries uploading all items and ignores any error.
+// If no item could be uploaded, this method returns an error.
+func (p *Photos) AddToLibrary(ctx context.Context, mediaItems []MediaItem) error {
+	newMediaItems := p.UploadMediaItems(ctx, mediaItems)
+	if len(newMediaItems) == 0 {
+		return fmt.Errorf("Could not upload any item")
 	}
-	for _, chunk := range splitMediaItems(mediaItems, batchCreateSize) {
-		p.log.Printf("Adding %d file(s) to the library", len(chunk))
+	for _, chunk := range splitMediaItems(newMediaItems, batchCreateSize) {
+		p.log.Printf("Adding %d item(s) to the library", len(chunk))
 		batch := &photoslibrary.BatchCreateMediaItemsRequest{NewMediaItems: chunk}
 		if err := p.BatchCreate(ctx, batch); err != nil {
 			return err
@@ -57,10 +57,10 @@ func (p *Photos) AddToLibrary(ctx context.Context, filepaths []Media) error {
 	return nil
 }
 
-// AddToAlbum adds the files to the album.
-// This method tries uploading all files and ignores any error.
-// If no file could be uploaded, this method returns an error.
-func (p *Photos) AddToAlbum(ctx context.Context, title string, filepaths []Media) error {
+// AddToAlbum adds the items to the album.
+// This method tries uploading all items and ignores any error.
+// If no item could be uploaded, this method returns an error.
+func (p *Photos) AddToAlbum(ctx context.Context, title string, mediaItems []MediaItem) error {
 	p.log.Printf("Finding album %s", title)
 	album, err := p.FindAlbumByTitle(ctx, title)
 	if err != nil {
@@ -79,12 +79,12 @@ func (p *Photos) AddToAlbum(ctx context.Context, title string, filepaths []Media
 		album = created
 	}
 
-	mediaItems := p.UploadFiles(ctx, filepaths)
-	if len(mediaItems) == 0 {
-		return fmt.Errorf("Could not upload any file")
+	newMediaItems := p.UploadMediaItems(ctx, mediaItems)
+	if len(newMediaItems) == 0 {
+		return fmt.Errorf("Could not upload any item")
 	}
-	for _, chunk := range splitMediaItems(mediaItems, batchCreateSize) {
-		p.log.Printf("Adding %d file(s) to the album", len(chunk))
+	for _, chunk := range splitMediaItems(newMediaItems, batchCreateSize) {
+		p.log.Printf("Adding %d item(s) to the album", len(chunk))
 		batch := &photoslibrary.BatchCreateMediaItemsRequest{
 			NewMediaItems: chunk,
 			AlbumId:       album.Id,
@@ -97,13 +97,13 @@ func (p *Photos) AddToAlbum(ctx context.Context, title string, filepaths []Media
 	return nil
 }
 
-// CreateAlbum creates an album with the files.
-// This method tries uploading all files and ignores any error.
-// If no file could be uploaded, this method returns an error.
-func (p *Photos) CreateAlbum(ctx context.Context, title string, filepaths []Media) (*photoslibrary.Album, error) {
-	mediaItems := p.UploadFiles(ctx, filepaths)
-	if len(mediaItems) == 0 {
-		return nil, fmt.Errorf("Could not upload any file")
+// CreateAlbum creates an album with the media items.
+// This method tries uploading all items and ignores any error.
+// If no item could be uploaded, this method returns an error.
+func (p *Photos) CreateAlbum(ctx context.Context, title string, mediaItems []MediaItem) (*photoslibrary.Album, error) {
+	newMediaItems := p.UploadMediaItems(ctx, mediaItems)
+	if len(newMediaItems) == 0 {
+		return nil, fmt.Errorf("Could not upload any item")
 	}
 
 	p.log.Printf("Creating album %s", title)
@@ -116,8 +116,8 @@ func (p *Photos) CreateAlbum(ctx context.Context, title string, filepaths []Medi
 		return nil, fmt.Errorf("Error while creating an album: %s", err)
 	}
 
-	for _, chunk := range splitMediaItems(mediaItems, batchCreateSize) {
-		p.log.Printf("Adding %d file(s) into the album %s", len(chunk), album.Title)
+	for _, chunk := range splitMediaItems(newMediaItems, batchCreateSize) {
+		p.log.Printf("Adding %d item(s) into the album %s", len(chunk), album.Title)
 		batch := &photoslibrary.BatchCreateMediaItemsRequest{
 			NewMediaItems: chunk,
 			AlbumId:       album.Id,

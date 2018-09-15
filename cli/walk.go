@@ -10,35 +10,34 @@ import (
 	"github.com/int128/gpup/photos"
 )
 
-func findFiles(filePaths []string, client *http.Client) ([]photos.Media, error) {
-	files := make([]photos.Media, 0)
-	for _, parent := range filePaths {
+func findMediaItems(args []string, client *http.Client) ([]photos.MediaItem, error) {
+	mediaItems := make([]photos.MediaItem, 0)
+	for _, arg := range args {
 		switch {
-		case strings.HasPrefix(parent, "http://") || strings.HasPrefix(parent, "https://"):
-			r, err := http.NewRequest("GET", parent, nil)
+		case strings.HasPrefix(arg, "http://") || strings.HasPrefix(arg, "https://"):
+			r, err := http.NewRequest("GET", arg, nil)
 			if err != nil {
 				return nil, fmt.Errorf("Could not parse URL: %s", err)
 			}
-			media := photos.HTTPMedia{
+			mediaItems = append(mediaItems, &photos.HTTPMediaItem{
 				Client:  client,
 				Request: r,
-			}
-			files = append(files, &media)
+			})
 		default:
-			if err := filepath.Walk(parent, func(child string, info os.FileInfo, err error) error {
+			if err := filepath.Walk(arg, func(name string, info os.FileInfo, err error) error {
 				switch {
 				case err != nil:
 					return err
 				case info.Mode().IsRegular():
-					files = append(files, photos.FileMedia(child))
+					mediaItems = append(mediaItems, photos.FileMediaItem(name))
 					return nil
 				default:
 					return nil
 				}
 			}); err != nil {
-				return nil, fmt.Errorf("Error while finding files in %s: %s", parent, err)
+				return nil, fmt.Errorf("Error while finding files in %s: %s", arg, err)
 			}
 		}
 	}
-	return files, nil
+	return mediaItems, nil
 }
