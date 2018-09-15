@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestFindFiles(t *testing.T) {
+func TestFindMediaItems(t *testing.T) {
 	expects := []string{
 		"album1/a.jpg",
 		"album2/b.jpg",
