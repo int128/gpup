@@ -16,11 +16,7 @@ func (c *CLI) upload(ctx context.Context) error {
 	if len(c.Paths) == 0 {
 		return fmt.Errorf("Nothing to upload")
 	}
-	client, err := c.newClient(ctx)
-	if err != nil {
-		return err
-	}
-	mediaItems, err := findMediaItems(c.Paths, client)
+	mediaItems, err := c.findMediaItems()
 	if err != nil {
 		return err
 	}
@@ -32,6 +28,10 @@ func (c *CLI) upload(ctx context.Context) error {
 		fmt.Printf("%3d: %s\n", i+1, mediaItem)
 	}
 
+	client, err := c.newOAuth2Client(ctx)
+	if err != nil {
+		return err
+	}
 	service, err := photos.New(client)
 	if err != nil {
 		return err
@@ -47,9 +47,10 @@ func (c *CLI) upload(ctx context.Context) error {
 	}
 }
 
-func findMediaItems(args []string, client *http.Client) ([]photos.MediaItem, error) {
+func (c *CLI) findMediaItems() ([]photos.MediaItem, error) {
+	client := c.newHTTPClient()
 	mediaItems := make([]photos.MediaItem, 0)
-	for _, arg := range args {
+	for _, arg := range c.Paths {
 		switch {
 		case strings.HasPrefix(arg, "http://") || strings.HasPrefix(arg, "https://"):
 			r, err := http.NewRequest("GET", arg, nil)
