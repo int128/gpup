@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"path"
@@ -31,7 +30,7 @@ const basePath = "https://photoslibrary.googleapis.com/"
 type MediaItem interface {
 	// Open returns a stream.
 	// Caller should close it finally.
-	Open() (io.ReadCloser, error)
+	Open() (io.ReadCloser, int64, error)
 	// Name returns the filename.
 	Name() string
 	// String returns the full name, e.g. path or URL.
@@ -43,8 +42,16 @@ type FileMediaItem string
 
 // Open returns a stream.
 // Caller should close it finally.
-func (m FileMediaItem) Open() (io.ReadCloser, error) {
-	return os.Open(m.String())
+func (m FileMediaItem) Open() (io.ReadCloser, int64, error) {
+	f, err := os.Stat(m.String())
+	if err != nil {
+		return nil, 0, err
+	}
+	r, err := os.Open(m.String())
+	if err != nil {
+		return nil, 0, err
+	}
+	return r, f.Size(), nil
 }
 
 // Name returns the filename.
@@ -64,17 +71,16 @@ type HTTPMediaItem struct {
 
 // Open returns a stream.
 // Caller should close it finally.
-func (m *HTTPMediaItem) Open() (io.ReadCloser, error) {
+func (m *HTTPMediaItem) Open() (io.ReadCloser, int64, error) {
 	r, err := m.Client.Do(m.Request)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if r.StatusCode < 200 || r.StatusCode > 299 {
 		r.Body.Close()
-		return nil, fmt.Errorf("Got %s", r.Status)
+		return nil, 0, fmt.Errorf("Got %s", r.Status)
 	}
-	log.Printf("%s %s", r.Status, m.Request.URL)
-	return r.Body, nil
+	return r.Body, r.ContentLength, nil
 }
 
 // Name returns the filename.
@@ -135,7 +141,7 @@ func (p *Photos) UploadMediaItem(ctx context.Context, mediaItem MediaItem) (*pho
 	b, cancel := uploadRetryPolicy.Start(ctx)
 	defer cancel()
 	for backoff.Continue(b) {
-		r, err := mediaItem.Open()
+		r, size, err := mediaItem.Open()
 		if err != nil {
 			return nil, fmt.Errorf("Could not open %s: %s", mediaItem, err)
 		}
@@ -145,10 +151,12 @@ func (p *Photos) UploadMediaItem(ctx context.Context, mediaItem MediaItem) (*pho
 		if err != nil {
 			return nil, fmt.Errorf("Could not create a request for uploading %s: %s", mediaItem, err)
 		}
+		req.ContentLength = size
+		req.Header.Add("Content-Type", "application/octet-stream")
 		req.Header.Add("X-Goog-Upload-File-Name", mediaItem.Name())
 		req.Header.Add("X-Goog-Upload-Protocol", "raw")
 
-		p.log.Printf("Uploading %s", mediaItem.Name())
+		p.log.Printf("Uploading %s (%d kB)", mediaItem.Name(), size/1024)
 		res, err := p.client.Do(req)
 		if err != nil {
 			p.log.Printf("Error while uploading %s: %s", mediaItem, err)
