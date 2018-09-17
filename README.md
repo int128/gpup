@@ -86,18 +86,20 @@ Usage:
   gpup [OPTIONS] <FILE | DIRECTORY | URL>...
 
 Application Options:
-  -a, --album=TITLE              Add files to the album or a new album if it does not exist
-  -n, --new-album=TITLE          Add files to a new album
-      --gpupconfig=              Path to the config file (default: ~/.gpupconfig) [$GPUPCONFIG]
-      --debug                    Enable request and response logging [$DEBUG]
+  -a, --album=TITLE                 Add files to the album or a new album if it does not exist
+  -n, --new-album=TITLE             Add files to a new album
+      --request-header=KEY:VALUE    Add the header on fetching URLs
+      --request-auth=USER:PASS      Add the basic auth header on fetching URLs
+      --gpupconfig=                 Path to the config file (default: ~/.gpupconfig) [$GPUPCONFIG]
+      --debug                       Enable request and response logging [$DEBUG]
 
 Options read from gpupconfig:
-      --google-client-id=        Google API client ID [$GOOGLE_CLIENT_ID]
-      --google-client-secret=    Google API client secret [$GOOGLE_CLIENT_SECRET]
-      --google-token=            Google API token [$GOOGLE_TOKEN]
+      --google-client-id=           Google API client ID [$GOOGLE_CLIENT_ID]
+      --google-client-secret=       Google API client secret [$GOOGLE_CLIENT_SECRET]
+      --google-token=               Google API token [$GOOGLE_TOKEN]
 
 Help Options:
-  -h, --help                     Show this help message
+  -h, --help                        Show this help message
 ```
 
 
