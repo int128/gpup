@@ -1,7 +1,15 @@
-package photos
+package internal
 
 import (
+	"time"
+
+	"github.com/lestrrat-go/backoff"
 	"google.golang.org/api/googleapi"
+)
+
+var defaultRetryPolicy = backoff.NewExponential(
+	backoff.WithInterval(3*time.Second),
+	backoff.WithMaxRetries(5),
 )
 
 // IsRetryableError returns true if the error is retryable,

@@ -14,21 +14,21 @@ type ListAlbumsFunc func(albums []*photoslibrary.Album, stop func())
 // ListAlbums gets a list of albums.
 // It calls the function for each 50 albums.
 func (p *Photos) ListAlbums(ctx context.Context, callback ListAlbumsFunc) error {
-	var nextPageToken string
+	var pageToken string
 	for {
-		albums, err := p.service.Albums.List().PageSize(50).PageToken(nextPageToken).Do()
+		res, err := p.service.ListAlbums(ctx, 50, pageToken)
 		if err != nil {
 			return fmt.Errorf("Error while listing albums: %s", err)
 		}
 		var stop bool
-		callback(albums.Albums, func() { stop = true })
+		callback(res.Albums, func() { stop = true })
 		if stop {
 			return nil
 		}
-		nextPageToken = albums.NextPageToken
-		if nextPageToken == "" {
+		if res.NextPageToken == "" {
 			return nil
 		}
+		pageToken = res.NextPageToken
 	}
 }
 
@@ -46,7 +46,7 @@ func (p *Photos) FindAlbumByTitle(ctx context.Context, title string) (*photoslib
 			}
 		}
 	}); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Could not find the album %s: %s", title, err)
 	}
 	return matched, nil
 }

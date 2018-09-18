@@ -4,37 +4,22 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"path"
 	"sync"
-	"time"
 
-	"github.com/lestrrat-go/backoff"
+	"github.com/int128/gpup/photos/internal"
 
 	photoslibrary "google.golang.org/api/photoslibrary/v1"
 )
 
 const uploadConcurrency = 4
 
-var uploadRetryPolicy = backoff.NewExponential(
-	backoff.WithInterval(3*time.Second),
-	backoff.WithMaxRetries(5),
-)
-
-const apiVersion = "v1"
-const basePath = "https://photoslibrary.googleapis.com/"
-
 // MediaItem represents an uploadable item.
 type MediaItem interface {
-	// Open returns a stream.
-	// Caller should close it finally.
-	Open() (io.ReadCloser, int64, error)
-	// Name returns the filename.
-	Name() string
-	// String returns the full name, e.g. path or URL.
-	String() string
+	internal.MediaItem
 }
 
 // FileMediaItem represents a local file.
@@ -101,7 +86,7 @@ func (p *Photos) UploadMediaItems(ctx context.Context, mediaItems []MediaItem) [
 		uploadQueue <- mediaItem
 	}
 	close(uploadQueue)
-	p.log.Printf("Queued %d item(s)", len(mediaItems))
+	log.Printf("Queued %d item(s)", len(mediaItems))
 
 	aggregateQueue := make(chan *photoslibrary.NewMediaItem, len(mediaItems))
 	workerGroup := new(sync.WaitGroup)
@@ -124,64 +109,11 @@ func (p *Photos) UploadMediaItems(ctx context.Context, mediaItems []MediaItem) [
 func (p *Photos) uploadWorker(ctx context.Context, uploadQueue chan MediaItem, aggregateQueue chan *photoslibrary.NewMediaItem, workerGroup *sync.WaitGroup) {
 	defer workerGroup.Done()
 	for mediaItem := range uploadQueue {
-		newMediaItem, err := p.UploadMediaItem(ctx, mediaItem)
+		newMediaItem, err := p.service.UploadMediaItem(ctx, mediaItem)
 		if err != nil {
-			p.log.Printf("Error while uploading %s: %s", mediaItem, err)
+			log.Printf("Error while uploading %s: %s", mediaItem, err)
 		} else {
 			aggregateQueue <- newMediaItem
 		}
 	}
-}
-
-// UploadMediaItem uploads the media item.
-// It returns an upload token. You can append it to the library by `Append()`.
-// It will retry uploading if status code is 5xx or network error occurs.
-// See https://developers.google.com/photos/library/guides/best-practices#retrying-failed-requests
-func (p *Photos) UploadMediaItem(ctx context.Context, mediaItem MediaItem) (*photoslibrary.NewMediaItem, error) {
-	b, cancel := uploadRetryPolicy.Start(ctx)
-	defer cancel()
-	for backoff.Continue(b) {
-		r, size, err := mediaItem.Open()
-		if err != nil {
-			return nil, fmt.Errorf("Could not open %s: %s", mediaItem, err)
-		}
-		defer r.Close()
-
-		req, err := http.NewRequest("POST", fmt.Sprintf("%s%s/uploads", basePath, apiVersion), r)
-		if err != nil {
-			return nil, fmt.Errorf("Could not create a request for uploading %s: %s", mediaItem, err)
-		}
-		req.ContentLength = size
-		req.Header.Add("Content-Type", "application/octet-stream")
-		req.Header.Add("X-Goog-Upload-File-Name", mediaItem.Name())
-		req.Header.Add("X-Goog-Upload-Protocol", "raw")
-
-		p.log.Printf("Uploading %s (%d kB)", mediaItem.Name(), size/1024)
-		res, err := p.client.Do(req)
-		if err != nil {
-			p.log.Printf("Error while uploading %s: %s", mediaItem, err)
-			continue
-		}
-		defer res.Body.Close()
-
-		b, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			p.log.Printf("Error while uploading %s: status %d: could not read body: %s", mediaItem, res.StatusCode, err)
-			continue
-		}
-		body := string(b)
-
-		switch {
-		case res.StatusCode == 200:
-			return &photoslibrary.NewMediaItem{
-				Description:     mediaItem.Name(),
-				SimpleMediaItem: &photoslibrary.SimpleMediaItem{UploadToken: body},
-			}, nil
-		case IsRetryableStatusCode(res.StatusCode):
-			p.log.Printf("Error while uploading %s: status %d: %s", mediaItem, res.StatusCode, body)
-		default:
-			return nil, fmt.Errorf("Could not upload %s: status %d: %s", mediaItem, res.StatusCode, body)
-		}
-	}
-	return nil, fmt.Errorf("Could not upload %s: retry over", mediaItem)
 }
