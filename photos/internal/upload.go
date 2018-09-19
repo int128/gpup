@@ -46,6 +46,7 @@ func (p *defaultPhotos) UploadMediaItem(ctx context.Context, mediaItem MediaItem
 		if err != nil {
 			return nil, fmt.Errorf("Could not create a request for uploading %s: %s", mediaItem, err)
 		}
+		req = req.WithContext(ctx)
 		req.ContentLength = size
 		req.Header.Add("Content-Type", "application/octet-stream")
 		req.Header.Add("X-Goog-Upload-File-Name", mediaItem.Name())

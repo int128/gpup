@@ -5,6 +5,7 @@ A command to upload files to your Google Photos Library that has the following f
 - Depend on the official [Google Photos Library API](https://developers.google.com/photos/library/guides/get-started).
 - Add files to the library or album.
 - Create an album if it does not exist.
+- Concurrent upload.
 
 
 ## Getting Started

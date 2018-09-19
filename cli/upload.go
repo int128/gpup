@@ -40,8 +40,7 @@ func (c *CLI) upload(ctx context.Context) error {
 	case c.AlbumTitle != "":
 		return service.AddToAlbum(ctx, c.AlbumTitle, mediaItems)
 	case c.NewAlbum != "":
-		_, err = service.CreateAlbum(ctx, c.NewAlbum, mediaItems)
-		return err
+		return service.CreateAlbum(ctx, c.NewAlbum, mediaItems)
 	default:
 		return service.AddToLibrary(ctx, mediaItems)
 	}
