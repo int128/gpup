@@ -32,29 +32,43 @@ func (c *CLI) newOAuth2Client(ctx context.Context) (*http.Client, error) {
 		RedirectURL:  "http://localhost:8000",
 	}
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, c.newHTTPClient())
-	if token == nil {
+	switch {
+	case token == nil:
 		flow := authz.AuthCodeFlow{
 			Config:     &oauth2Config,
 			ServerPort: 8000,
 		}
 		token, err = flow.GetToken(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Could not get a token: %s", err)
 		}
 		c.ExternalConfig.EncodedToken, err = EncodeToken(token)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Could not encode the token: %s", err)
+		}
+		if err := c.ExternalConfig.Write(c.ConfigName); err != nil {
+			return nil, fmt.Errorf("Could not write the token to %s: %s", c.ConfigName, err)
+		}
+		log.Printf("Saved token to %s", c.ConfigName)
+
+	case !token.Valid():
+		log.Printf("Token of %s has been expired, refreshing", c.ConfigName)
+		token, err = oauth2Config.TokenSource(ctx, token).Token()
+		if err != nil {
+			return nil, fmt.Errorf("Could not refresh the token: %s", err)
+		}
+		c.ExternalConfig.EncodedToken, err = EncodeToken(token)
+		if err != nil {
+			return nil, fmt.Errorf("Could not encode the token: %s", err)
 		}
 		if err := c.ExternalConfig.Write(c.ConfigName); err != nil {
 			return nil, fmt.Errorf("Could not write token to %s: %s", c.ConfigName, err)
 		}
 		log.Printf("Saved token to %s", c.ConfigName)
-	} else {
-		log.Printf("Using token in %s", c.ConfigName)
 	}
 	client := oauth2Config.Client(ctx, token)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Could not create a client: %s", err)
 	}
 	if c.Debug {
 		client.Transport = loggingTransport{client.Transport}
