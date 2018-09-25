@@ -10,17 +10,17 @@ import (
 	"github.com/int128/gpup/photos/internal"
 )
 
-// MediaItem represents an uploadable item.
-type MediaItem interface {
-	internal.MediaItem
+// UploadItem represents an uploadable item.
+type UploadItem interface {
+	internal.UploadItem
 }
 
-// FileMediaItem represents a local file.
-type FileMediaItem string
+// FileUploadItem represents a local file.
+type FileUploadItem string
 
 // Open returns a stream.
 // Caller should close it finally.
-func (m FileMediaItem) Open() (io.ReadCloser, int64, error) {
+func (m FileUploadItem) Open() (io.ReadCloser, int64, error) {
 	f, err := os.Stat(m.String())
 	if err != nil {
 		return nil, 0, err
@@ -33,23 +33,23 @@ func (m FileMediaItem) Open() (io.ReadCloser, int64, error) {
 }
 
 // Name returns the filename.
-func (m FileMediaItem) Name() string {
+func (m FileUploadItem) Name() string {
 	return path.Base(m.String())
 }
 
-func (m FileMediaItem) String() string {
+func (m FileUploadItem) String() string {
 	return string(m)
 }
 
-// HTTPMediaItem represents a remote file.
-type HTTPMediaItem struct {
+// HTTPUploadItem represents a remote file.
+type HTTPUploadItem struct {
 	Client  *http.Client
 	Request *http.Request
 }
 
 // Open returns a stream.
 // Caller should close it finally.
-func (m *HTTPMediaItem) Open() (io.ReadCloser, int64, error) {
+func (m *HTTPUploadItem) Open() (io.ReadCloser, int64, error) {
 	r, err := m.Client.Do(m.Request)
 	if err != nil {
 		return nil, 0, err
@@ -62,10 +62,10 @@ func (m *HTTPMediaItem) Open() (io.ReadCloser, int64, error) {
 }
 
 // Name returns the filename.
-func (m *HTTPMediaItem) Name() string {
+func (m *HTTPUploadItem) Name() string {
 	return path.Base(m.Request.URL.Path)
 }
 
-func (m *HTTPMediaItem) String() string {
+func (m *HTTPUploadItem) String() string {
 	return m.Request.URL.String()
 }

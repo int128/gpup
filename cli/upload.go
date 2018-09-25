@@ -16,16 +16,16 @@ func (c *CLI) upload(ctx context.Context) error {
 	if len(c.Paths) == 0 {
 		return fmt.Errorf("Nothing to upload")
 	}
-	mediaItems, err := c.findMediaItems()
+	uploadItems, err := c.findUploadItems()
 	if err != nil {
 		return err
 	}
-	if len(mediaItems) == 0 {
+	if len(uploadItems) == 0 {
 		return fmt.Errorf("Nothing to upload in %s", strings.Join(c.Paths, ", "))
 	}
-	log.Printf("The following %d items will be uploaded:", len(mediaItems))
-	for i, mediaItem := range mediaItems {
-		fmt.Printf("%3d: %s\n", i+1, mediaItem)
+	log.Printf("The following %d items will be uploaded:", len(uploadItems))
+	for i, uploadItem := range uploadItems {
+		fmt.Printf("%3d: %s\n", i+1, uploadItem)
 	}
 
 	client, err := c.newOAuth2Client(ctx)
@@ -38,17 +38,17 @@ func (c *CLI) upload(ctx context.Context) error {
 	}
 	switch {
 	case c.AlbumTitle != "":
-		return service.AddToAlbum(ctx, c.AlbumTitle, mediaItems)
+		return service.AddToAlbum(ctx, c.AlbumTitle, uploadItems)
 	case c.NewAlbum != "":
-		return service.CreateAlbum(ctx, c.NewAlbum, mediaItems)
+		return service.CreateAlbum(ctx, c.NewAlbum, uploadItems)
 	default:
-		return service.AddToLibrary(ctx, mediaItems)
+		return service.AddToLibrary(ctx, uploadItems)
 	}
 }
 
-func (c *CLI) findMediaItems() ([]photos.MediaItem, error) {
+func (c *CLI) findUploadItems() ([]photos.UploadItem, error) {
 	client := c.newHTTPClient()
-	mediaItems := make([]photos.MediaItem, 0)
+	uploadItems := make([]photos.UploadItem, 0)
 	for _, arg := range c.Paths {
 		switch {
 		case strings.HasPrefix(arg, "http://") || strings.HasPrefix(arg, "https://"):
@@ -64,7 +64,7 @@ func (c *CLI) findMediaItems() ([]photos.MediaItem, error) {
 				kv := strings.SplitN(header, ":", 2)
 				r.Header.Add(strings.TrimSpace(kv[0]), strings.TrimSpace(kv[1]))
 			}
-			mediaItems = append(mediaItems, &photos.HTTPMediaItem{
+			uploadItems = append(uploadItems, &photos.HTTPUploadItem{
 				Client:  client,
 				Request: r,
 			})
@@ -74,7 +74,7 @@ func (c *CLI) findMediaItems() ([]photos.MediaItem, error) {
 				case err != nil:
 					return err
 				case info.Mode().IsRegular():
-					mediaItems = append(mediaItems, photos.FileMediaItem(name))
+					uploadItems = append(uploadItems, photos.FileUploadItem(name))
 					return nil
 				default:
 					return nil
@@ -84,5 +84,5 @@ func (c *CLI) findMediaItems() ([]photos.MediaItem, error) {
 			}
 		}
 	}
-	return mediaItems, nil
+	return uploadItems, nil
 }

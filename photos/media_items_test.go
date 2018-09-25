@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestFileMediaItem(t *testing.T) {
+func TestFileUploadItem(t *testing.T) {
 	tempdir, err := ioutil.TempDir("", t.Name())
 	if err != nil {
 		t.Fatalf("Could not create a temporary directory: %s", err)
@@ -18,7 +18,7 @@ func TestFileMediaItem(t *testing.T) {
 		t.Fatalf("Could not write bytes to file: %s", err)
 	}
 	filename := tempdir + "/foo.jpg"
-	item := FileMediaItem(filename)
+	item := FileUploadItem(filename)
 
 	if "foo.jpg" != item.Name() {
 		t.Errorf("Name() wants %s but %s", "foo.jpg", item.Name())
@@ -43,7 +43,7 @@ func TestFileMediaItem(t *testing.T) {
 	}
 }
 
-func TestHTTPMediaItem(t *testing.T) {
+func TestHTTPUploadItem(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/foo.jpg":
@@ -58,7 +58,7 @@ func TestHTTPMediaItem(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not create a request: %s", err)
 	}
-	item := &HTTPMediaItem{
+	item := &HTTPUploadItem{
 		Client:  http.DefaultClient,
 		Request: req,
 	}

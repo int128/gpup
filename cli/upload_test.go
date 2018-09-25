@@ -8,7 +8,7 @@ import (
 	"github.com/int128/gpup/photos"
 )
 
-func TestCLI_findMediaItems(t *testing.T) {
+func TestCLI_findUploadItems(t *testing.T) {
 	tempdir, err := ioutil.TempDir("", "FindFiles")
 	if err != nil {
 		t.Fatal(err)
@@ -38,12 +38,12 @@ func TestCLI_findMediaItems(t *testing.T) {
 			"http://www.example.com/image.jpg",
 		},
 	}
-	mediaItems, err := c.findMediaItems()
+	uploadItems, err := c.findUploadItems()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(mediaItems) != 4 {
-		t.Errorf("wants size 4 but %d", len(mediaItems))
+	if len(uploadItems) != 4 {
+		t.Errorf("wants size 4 but %d", len(uploadItems))
 	}
 	expects := []string{
 		"album1/a.jpg",
@@ -51,35 +51,35 @@ func TestCLI_findMediaItems(t *testing.T) {
 		"album2/c.jpg",
 	}
 	for i, expect := range expects {
-		if mediaItems[i].String() != expect {
-			t.Errorf("[%d] wants %s but %+v", i, expect, mediaItems[i])
+		if uploadItems[i].String() != expect {
+			t.Errorf("[%d] wants %s but %+v", i, expect, uploadItems[i])
 		}
 	}
-	if mediaItem, ok := mediaItems[3].(*photos.HTTPMediaItem); !ok {
-		t.Errorf("[3] wants HTTPMediaItem but %+v", mediaItems[3])
-	} else if r := mediaItem.Request; r == nil {
+	if uploadItem, ok := uploadItems[3].(*photos.HTTPUploadItem); !ok {
+		t.Errorf("[3] wants HTTPUploadItem but %+v", uploadItems[3])
+	} else if r := uploadItem.Request; r == nil {
 		t.Errorf("[3].Request wants non-nil but nil")
 	} else if want := "http://www.example.com/image.jpg"; r.URL.String() != want {
 		t.Errorf("[3].Request.URL wants %s but %s", want, r.URL)
 	}
 }
 
-func TestCLI_findMediaItems_Headers(t *testing.T) {
+func TestCLI_findUploadItems_Headers(t *testing.T) {
 	c := CLI{
 		Paths:            []string{"http://www.example.com/image.jpg"},
 		RequestHeaders:   []string{"Cookie: foo"},
 		RequestBasicAuth: "alice:bob",
 	}
-	mediaItems, err := c.findMediaItems()
+	uploadItems, err := c.findUploadItems()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(mediaItems) != 1 {
-		t.Errorf("wants size 1 but %d", len(mediaItems))
+	if len(uploadItems) != 1 {
+		t.Errorf("wants size 1 but %d", len(uploadItems))
 	}
-	if mediaItem, ok := mediaItems[0].(*photos.HTTPMediaItem); !ok {
-		t.Errorf("[0] wants HTTPMediaItem but %+v", mediaItems[0])
-	} else if r := mediaItem.Request; r == nil {
+	if uploadItem, ok := uploadItems[0].(*photos.HTTPUploadItem); !ok {
+		t.Errorf("[0] wants HTTPUploadItem but %+v", uploadItems[0])
+	} else if r := uploadItem.Request; r == nil {
 		t.Errorf("[0].Request wants non-nil but nil")
 	} else if r.URL.String() != "http://www.example.com/image.jpg" {
 		t.Errorf("[0].Request.URL wants %s but %s", "http://www.example.com/image.jpg", r.URL)
