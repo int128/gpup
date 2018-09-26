@@ -25,7 +25,7 @@ func (c *CLI) upload(ctx context.Context) error {
 	}
 	log.Printf("The following %d items will be uploaded:", len(uploadItems))
 	for i, uploadItem := range uploadItems {
-		fmt.Printf("%3d: %s\n", i+1, uploadItem)
+		fmt.Fprintf(os.Stderr, "#%d: %s\n", i+1, uploadItem)
 	}
 
 	client, err := c.newOAuth2Client(ctx)
@@ -36,14 +36,26 @@ func (c *CLI) upload(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	var results []*photos.AddResult
 	switch {
 	case c.AlbumTitle != "":
-		return service.AddToAlbum(ctx, c.AlbumTitle, uploadItems)
+		results, err = service.AddToAlbum(ctx, c.AlbumTitle, uploadItems)
 	case c.NewAlbum != "":
-		return service.CreateAlbum(ctx, c.NewAlbum, uploadItems)
+		results, err = service.CreateAlbum(ctx, c.NewAlbum, uploadItems)
 	default:
-		return service.AddToLibrary(ctx, uploadItems)
+		results = service.AddToLibrary(ctx, uploadItems)
 	}
+	if err != nil {
+		return err
+	}
+	for i, r := range results {
+		if r.Error != nil {
+			fmt.Printf("#%d: %s: %s\n", i+1, uploadItems[i], r.Error)
+		} else {
+			fmt.Printf("#%d: %s: OK\n", i+1, uploadItems[i])
+		}
+	}
+	return nil
 }
 
 func (c *CLI) findUploadItems() ([]photos.UploadItem, error) {
