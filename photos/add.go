@@ -11,24 +11,24 @@ import (
 	photoslibrary "google.golang.org/api/photoslibrary/v1"
 )
 
-const uploadConcurrency = 4
-const batchCreateSize = 10
+var uploadConcurrency = 4
+var batchCreateSize = 50
 
 // AddToLibrary adds the items to the library.
 // This method tries uploading all items and ignores any error.
 // If no item could be uploaded, this method returns an error.
-func (p *Photos) AddToLibrary(ctx context.Context, uploadItems []UploadItem) error {
-	return p.addUploadItems(ctx, uploadItems, &photoslibrary.BatchCreateMediaItemsRequest{})
+func (p *Photos) AddToLibrary(ctx context.Context, uploadItems []UploadItem) []*AddResult {
+	return p.add(ctx, uploadItems, photoslibrary.BatchCreateMediaItemsRequest{})
 }
 
 // AddToAlbum adds the items to the album.
 // This method tries uploading all items and ignores any error.
 // If no item could be uploaded, this method returns an error.
-func (p *Photos) AddToAlbum(ctx context.Context, title string, uploadItems []UploadItem) error {
+func (p *Photos) AddToAlbum(ctx context.Context, title string, uploadItems []UploadItem) ([]*AddResult, error) {
 	log.Printf("Finding album %s", title)
 	album, err := p.FindAlbumByTitle(ctx, title)
 	if err != nil {
-		return fmt.Errorf("Could not list albums: %s", err)
+		return nil, fmt.Errorf("Could not list albums: %s", err)
 	}
 	if album == nil {
 		log.Printf("Creating album %s", title)
@@ -36,134 +36,141 @@ func (p *Photos) AddToAlbum(ctx context.Context, title string, uploadItems []Upl
 			Album: &photoslibrary.Album{Title: title},
 		})
 		if err != nil {
-			return fmt.Errorf("Could not create an album: %s", err)
+			return nil, fmt.Errorf("Could not create an album: %s", err)
 		}
 		album = created
 	}
-	return p.addUploadItems(ctx, uploadItems, &photoslibrary.BatchCreateMediaItemsRequest{
+	return p.add(ctx, uploadItems, photoslibrary.BatchCreateMediaItemsRequest{
 		AlbumId:       album.Id,
 		AlbumPosition: &photoslibrary.AlbumPosition{Position: "LAST_IN_ALBUM"},
-	})
+	}), nil
 }
 
 // CreateAlbum creates an album with the media items.
 // This method tries uploading all items and ignores any error.
 // If no item could be uploaded, this method returns an error.
-func (p *Photos) CreateAlbum(ctx context.Context, title string, uploadItems []UploadItem) error {
+func (p *Photos) CreateAlbum(ctx context.Context, title string, uploadItems []UploadItem) ([]*AddResult, error) {
 	log.Printf("Creating album %s", title)
 	album, err := p.service.CreateAlbum(ctx, &photoslibrary.CreateAlbumRequest{
 		Album: &photoslibrary.Album{Title: title},
 	})
 	if err != nil {
-		return fmt.Errorf("Could not create an album: %s", err)
+		return nil, fmt.Errorf("Could not create an album: %s", err)
 	}
-	return p.addUploadItems(ctx, uploadItems, &photoslibrary.BatchCreateMediaItemsRequest{
+	return p.add(ctx, uploadItems, photoslibrary.BatchCreateMediaItemsRequest{
 		AlbumId:       album.Id,
 		AlbumPosition: &photoslibrary.AlbumPosition{Position: "LAST_IN_ALBUM"},
-	})
+	}), nil
 }
 
-func (p *Photos) addUploadItems(ctx context.Context, uploadItems []UploadItem, batchCreateRequest *photoslibrary.BatchCreateMediaItemsRequest) error {
-	uploadQueue := make(chan UploadItem, len(uploadItems))
-	for _, uploadItem := range uploadItems {
-		uploadQueue <- uploadItem
+// AddResult represents result of the add operation.
+type AddResult struct {
+	MediaItem *photoslibrary.MediaItem
+	Error     error
+}
+
+func (p *Photos) add(ctx context.Context, uploadItems []UploadItem, req photoslibrary.BatchCreateMediaItemsRequest) []*AddResult {
+	uploadQueue := make(chan *uploadTask, len(uploadItems))
+	var batchCreateTasks []*batchCreateTask
+	for _, batch := range split(uploadItems, batchCreateSize) {
+		var bt batchCreateTask
+		batchCreateTasks = append(batchCreateTasks, &bt)
+		bt.wg.Add(len(batch))
+		for _, item := range batch {
+			ut := &uploadTask{wg: &bt.wg, item: item}
+			bt.uploadTasks = append(bt.uploadTasks, ut)
+			uploadQueue <- ut
+		}
 	}
 	close(uploadQueue)
-	log.Printf("Queued %d item(s)", len(uploadItems))
+	log.Printf("Queued %d item(s)", len(uploadQueue))
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	batchCreateQueue := make(chan internal.UploadToken, len(uploadItems))
-	var wg sync.WaitGroup
 	for i := 0; i < uploadConcurrency; i++ {
-		wg.Add(1)
 		go func() {
-			defer wg.Done()
-			for uploadItem := range uploadQueue {
-				uploadToken, err := p.service.Upload(ctx, uploadItem)
-				if err != nil {
-					log.Printf("Error while uploading %s: %s", uploadItem, err)
-				} else {
-					batchCreateQueue <- uploadToken
-				}
+			for ut := range uploadQueue {
+				ut.token, ut.err = p.service.Upload(ctx, ut.item)
+				ut.wg.Done()
 			}
 		}()
 	}
-	go func() {
-		wg.Wait()
-		close(batchCreateQueue)
-	}()
+	for _, bt := range batchCreateTasks {
+		bt.wg.Wait()
+		req.NewMediaItems = bt.toNewMediaItems()
+		if len(req.NewMediaItems) > 0 {
+			log.Printf("Adding %d item(s)", len(req.NewMediaItems))
+			bt.res, bt.err = p.service.BatchCreate(ctx, &req)
+		}
+	}
 
-	buffer := batchCreateBuffer{
-		Size: batchCreateSize,
-		Trigger: func(newMediaItems []*photoslibrary.NewMediaItem) error {
-			log.Printf("Adding %d item(s)", len(newMediaItems))
-			res, err := p.service.BatchCreate(ctx, &photoslibrary.BatchCreateMediaItemsRequest{
-				NewMediaItems: newMediaItems,
-				AlbumId:       batchCreateRequest.AlbumId,
-				AlbumPosition: batchCreateRequest.AlbumPosition,
-			})
-			if err != nil {
-				return fmt.Errorf("Could not add items: %s", err)
-			}
-			for _, result := range res.NewMediaItemResults {
-				if result.Status.Code != 0 {
-					if mediaItem := findMediaItemByUploadToken(newMediaItems, result.UploadToken); mediaItem != nil {
-						log.Printf("Skipped %s: %s (%d)", mediaItem.Description, result.Status.Message, result.Status.Code)
-					} else {
-						log.Printf("Error while adding the item: %s (%d)", result.Status.Message, result.Status.Code)
-					}
+	var results []*AddResult
+	for _, bt := range batchCreateTasks {
+		m := bt.toNewMediaItemResultMap()
+		for _, ut := range bt.uploadTasks {
+			var r AddResult
+			results = append(results, &r)
+			if bt.err != nil {
+				r.Error = fmt.Errorf("Error while batch create: %s", bt.err)
+			} else if ut.err != nil {
+				r.Error = fmt.Errorf("Error while upload: %s", ut.err)
+			} else if mr, ok := m[ut.token]; ok {
+				if mr.Status.Code != 0 {
+					r.Error = fmt.Errorf("%s (code=%d)", mr.Status.Message, mr.Status.Code)
+				} else {
+					r.MediaItem = mr.MediaItem
 				}
 			}
-			return nil
-		},
-	}
-	for uploadToken := range batchCreateQueue {
-		if err := buffer.Add(&photoslibrary.NewMediaItem{
-			SimpleMediaItem: &photoslibrary.SimpleMediaItem{UploadToken: string(uploadToken)},
-		}); err != nil {
-			return err
 		}
 	}
-	return buffer.Flush()
+	return results
 }
 
-func findMediaItemByUploadToken(mediaItems []*photoslibrary.NewMediaItem, uploadToken string) *photoslibrary.NewMediaItem {
-	for _, mediaItem := range mediaItems {
-		if mediaItem.SimpleMediaItem.UploadToken == uploadToken {
-			return mediaItem
+func split(items []UploadItem, n int) [][]UploadItem {
+	var batch []UploadItem
+	var batches [][]UploadItem
+	for len(items) >= n {
+		batch, items = items[:n], items[n:]
+		batches = append(batches, batch)
+	}
+	if len(items) > 0 {
+		batches = append(batches, items)
+	}
+	return batches
+}
+
+type batchCreateTask struct {
+	uploadTasks []*uploadTask
+	wg          sync.WaitGroup
+	res         *photoslibrary.BatchCreateMediaItemsResponse
+	err         error
+}
+
+func (bt *batchCreateTask) toNewMediaItems() []*photoslibrary.NewMediaItem {
+	ret := make([]*photoslibrary.NewMediaItem, 0)
+	for _, ut := range bt.uploadTasks {
+		if ut.token != "" {
+			ret = append(ret, &photoslibrary.NewMediaItem{
+				SimpleMediaItem: &photoslibrary.SimpleMediaItem{UploadToken: string(ut.token)},
+				Description:     ut.item.Name(),
+			})
 		}
 	}
-	return nil
+	return ret
 }
 
-type batchCreateBuffer struct {
-	Size    int
-	Trigger func([]*photoslibrary.NewMediaItem) error
-
-	batch []*photoslibrary.NewMediaItem
-}
-
-func (b *batchCreateBuffer) empty() {
-	b.batch = make([]*photoslibrary.NewMediaItem, 0)
-}
-
-func (b *batchCreateBuffer) Add(item *photoslibrary.NewMediaItem) error {
-	if b.batch == nil {
-		b.empty()
+func (bt *batchCreateTask) toNewMediaItemResultMap() map[internal.UploadToken]*photoslibrary.NewMediaItemResult {
+	m := make(map[internal.UploadToken]*photoslibrary.NewMediaItemResult)
+	if bt.res == nil {
+		return m
 	}
-	b.batch = append(b.batch, item)
-	if len(b.batch) >= b.Size {
-		defer b.empty()
-		return b.Trigger(b.batch)
+	for _, r := range bt.res.NewMediaItemResults {
+		m[internal.UploadToken(r.UploadToken)] = r
 	}
-	return nil
+	return m
 }
 
-func (b *batchCreateBuffer) Flush() error {
-	if len(b.batch) > 0 {
-		defer b.empty()
-		return b.Trigger(b.batch)
-	}
-	return nil
+type uploadTask struct {
+	wg    *sync.WaitGroup
+	item  UploadItem
+	token internal.UploadToken
+	err   error
 }
