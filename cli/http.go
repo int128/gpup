@@ -29,15 +29,11 @@ func (c *CLI) newOAuth2Client(ctx context.Context) (*http.Client, error) {
 		ClientSecret: c.ExternalConfig.ClientSecret,
 		Endpoint:     photos.Endpoint,
 		Scopes:       photos.Scopes,
-		RedirectURL:  "http://localhost:8000",
 	}
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, c.newHTTPClient())
 	switch {
 	case token == nil:
-		flow := authz.AuthCodeFlow{
-			Config:     &oauth2Config,
-			ServerPort: 8000,
-		}
+		flow := authz.AuthCodeFlow{Config: oauth2Config}
 		token, err = flow.GetToken(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("Could not get a token: %s", err)

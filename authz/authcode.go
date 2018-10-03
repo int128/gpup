@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pkg/browser"
@@ -13,9 +16,9 @@ import (
 
 // AuthCodeFlow provides OAuth 2.0 auth code grant flow.
 type AuthCodeFlow struct {
-	Config          *oauth2.Config
+	Config          oauth2.Config // OAuth config. RedirectURL will be set if empty
 	AuthCodeOptions []oauth2.AuthCodeOption
-	ServerPort      int  // HTTP server port
+	ServerPort      int  // HTTP server port, default to a random port
 	SkipOpenBrowser bool // skip opening browser if true
 }
 
@@ -41,8 +44,22 @@ func (f *AuthCodeFlow) getAuthCode(ctx context.Context) (string, error) {
 	defer close(codeCh)
 	errCh := make(chan error)
 	defer close(errCh)
-	server := http.Server{
-		Addr: fmt.Sprintf("localhost:%d", f.ServerPort),
+
+	listener, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", f.ServerPort))
+	if err != nil {
+		return "", fmt.Errorf("Could not listen to port %d", f.ServerPort)
+	}
+	defer listener.Close()
+	port, err := extractPort(listener.Addr())
+	if err != nil {
+		return "", fmt.Errorf("Could not determine listening port: %s", err)
+	}
+	log.Printf("Listening to port %d", port)
+	if f.Config.RedirectURL == "" {
+		f.Config.RedirectURL = fmt.Sprintf("http://localhost:%d/", port)
+	}
+
+	server := &http.Server{
 		Handler: &authCodeHandler{
 			authCodeURL: f.Config.AuthCodeURL(state, f.AuthCodeOptions...),
 			gotCode: func(code string, gotState string) {
@@ -57,29 +74,39 @@ func (f *AuthCodeFlow) getAuthCode(ctx context.Context) (string, error) {
 			},
 		},
 	}
+	defer server.Shutdown(ctx)
 	go func() {
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := server.Serve(listener); err != nil && err != http.ErrServerClosed {
 			errCh <- err
 		}
 	}()
 	go func() {
-		log.Printf("Open http://localhost:%d for authorization", f.ServerPort)
+		log.Printf("Open http://localhost:%d for authorization", port)
 		if !f.SkipOpenBrowser {
 			time.Sleep(500 * time.Millisecond)
-			browser.OpenURL(fmt.Sprintf("http://localhost:%d/", f.ServerPort))
+			browser.OpenURL(fmt.Sprintf("http://localhost:%d/", port))
 		}
 	}()
 	select {
 	case err := <-errCh:
-		server.Shutdown(ctx)
 		return "", err
 	case code := <-codeCh:
-		server.Shutdown(ctx)
 		return code, nil
 	case <-ctx.Done():
-		server.Shutdown(ctx)
 		return "", ctx.Err()
 	}
+}
+
+func extractPort(addr net.Addr) (int, error) {
+	s := strings.SplitN(addr.String(), ":", 2)
+	if len(s) != 2 {
+		return 0, fmt.Errorf("Invalid address: %s", addr)
+	}
+	p, err := strconv.Atoi(s[1])
+	if err != nil {
+		return 0, fmt.Errorf("Not number %s: %s", addr, err)
+	}
+	return p, nil
 }
 
 type authCodeHandler struct {
