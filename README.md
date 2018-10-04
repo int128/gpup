@@ -1,14 +1,11 @@
 # gpup [![CircleCI](https://circleci.com/gh/int128/gpup.svg?style=shield)](https://circleci.com/gh/int128/gpup)
 
-A command to upload files to your Google Photos Library that has the following features.
-
-- Depend on the official [Google Photos Library API](https://developers.google.com/photos/library/guides/get-started).
-- Add files to the library or album.
-- Create an album if it does not exist.
-- Concurrent upload.
+A command to upload photos and movies to your Google Photos Library.
 
 
 ## Getting Started
+
+### Setup
 
 You can install this from brew tap or [releases](https://github.com/int128/gpup/releases).
 
@@ -41,6 +38,8 @@ Enter your OAuth client secret: YOUR_CLIENT_SECRET
 2018/09/13 15:38:22 Error: Nothing to upload
 ```
 
+### Upload files to the library
+
 To upload files in a folder to your Google Photos library:
 
 ```
@@ -59,6 +58,15 @@ $ gpup my-photos/
 ```
 
 It opens the browser and you can log in to the provider.
+And then it uploads files concurrently.
+
+You can specify URLs as well.
+
+```sh
+gpup https://www.example.com/image.jpg
+```
+
+### Upload files to an album
 
 You can upload files to the album by `-a` option.
 If the album does not exist, it will be created.
@@ -71,12 +79,6 @@ You can upload files to a new album by `-n` option.
 
 ```sh
 gpup -n "My Album" my-photos/
-```
-
-You can upload URLs as well.
-
-```sh
-gpup https://www.example.com/image.jpg
 ```
 
 
@@ -104,16 +106,14 @@ Help Options:
 ```
 
 
-## Caveats
+## Known issues
 
-At this time there are some limitations due to Google Photos Library API.
+See [the Google Issue Tracker](https://issuetracker.google.com/issues?q=componentid:385336%20status:open) for the known issues.
 
-If you upload an image without timestamp in the EXIF header, timestamp of the image will be current time.
-Also timestamp of a movie will be current time.
+### Timestamp
+
+If you upload an photo or movie without timestamp in the header, timestamp of the image will be current time.
 Google Photos Library API does not provide setting timestamp for now.
-
-You cannot control order of uploading items.
-Google Photos Library API does not provide ordering media items for now.
 
 
 ## Contribution
