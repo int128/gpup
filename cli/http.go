@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 
-	"github.com/int128/gpup/authz"
+	"github.com/int128/oauth2cli"
 	"github.com/int128/gpup/photos"
 	"golang.org/x/oauth2"
 )
@@ -33,7 +33,7 @@ func (c *CLI) newOAuth2Client(ctx context.Context) (*http.Client, error) {
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, c.newHTTPClient())
 	switch {
 	case token == nil:
-		flow := authz.AuthCodeFlow{Config: oauth2Config}
+		flow := oauth2cli.AuthCodeFlow{Config: oauth2Config}
 		token, err = flow.GetToken(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("Could not get a token: %s", err)

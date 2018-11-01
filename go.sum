@@ -1,5 +1,7 @@
 cloud.google.com/go v0.31.0 h1:o9K5MWWt2wk+d9jkGn2DAZ7Q9nUdnFLOpK9eIkDwONQ=
 cloud.google.com/go v0.31.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
+github.com/int128/oauth2cli v1.0.0 h1:bQcKSgS7lBVIhEJ1IE689oGW6AmTPrh/mQkxqGxX2Z0=
+github.com/int128/oauth2cli v1.0.0/go.mod h1:ClkmeKFkDlkVtqncv98+V4Gny/luvARCIoK/+3KlKb8=
 github.com/jessevdk/go-flags v1.4.0 h1:4IU2WS7AumrZ/40jfhf4QVDMsQwqA7VEHozFRrGARJA=
 github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
 github.com/lestrrat-go/backoff v0.0.0-20180409035020-828830ec1d9a h1:DCfDQWu/bw/MYv3mk/tYkp2G35YkRQ+LfUxzdsiIo5E=
@@ -12,6 +14,7 @@ github.com/pkg/errors v0.8.0 h1:WdK/asTD0HN+q6hsWO3/vpuAkAr+tw6aNJNDFFf0+qw=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 golang.org/x/net v0.0.0-20181029044818-c44066c5c816 h1:mVFkLpejdFLXVUv9E42f3XJVfMdqd0IVLVIVLjZWn5o=
 golang.org/x/net v0.0.0-20181029044818-c44066c5c816/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
+golang.org/x/oauth2 v0.0.0-20181017192945-9dcd33a902f4/go.mod h1:N/0e6XlmueqKjAGxoOufVs8QHGRruUQn6yWY3a++T0U=
 golang.org/x/oauth2 v0.0.0-20181031022657-8527f56f7107 h1:63fpDttzclb8owmRoxSaFNbnT1CG25L0Yvnhh9lU1SE=
 golang.org/x/oauth2 v0.0.0-20181031022657-8527f56f7107/go.mod h1:N/0e6XlmueqKjAGxoOufVs8QHGRruUQn6yWY3a++T0U=
 google.golang.org/api v0.0.0-20181101000641-61ce27ee8154 h1:DqMjeNv3mOVIVXy5mVpZ+IY8VW9+1qAE1jsgNyMNB3Y=
