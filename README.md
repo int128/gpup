@@ -115,6 +115,15 @@ See [the Google Issue Tracker](https://issuetracker.google.com/issues?q=componen
 If you upload an photo or movie without timestamp in the header, timestamp of the image will be current time.
 Google Photos Library API does not provide setting timestamp for now.
 
+### Photo storage and quality
+
+By using gpup, files are uploaded in original quality, which consumes user's storage. It's the limitation of Photos Library API, as stated in [the offical document](https://developers.google.com/photos/library/guides/api-limits-quotas).
+
+```
+All media items uploaded to Google Photos using the API are stored in full resolution at original quality. They count toward the user’s storage.
+```
+
+A workaround for this is to use [recover storage feature](https://support.google.com/photos/answer/6220791) of Google Photos, which lets you free up the storage space by converting all the files uploaded in original quality to high quality.
 
 ## Contribution
 
