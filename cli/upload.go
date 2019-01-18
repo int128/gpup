@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"log"
@@ -68,8 +69,36 @@ func (c *CLI) findUploadItems() ([]photos.UploadItem, error) {
 		return nil, fmt.Errorf("Could not build filter: %s", err)
 	}
 
+	addPath := func(path string) error {
+		return filepath.Walk(path, func(name string, info os.FileInfo, err error) error {
+			switch {
+			case err != nil:
+				return err
+			case info.Mode().IsRegular():
+				if filter([]byte(name)) {
+					uploadItems = append(uploadItems, photos.FileUploadItem(name))
+				}
+				return nil
+			default:
+				return nil
+			}
+		})
+	}
+
 	for _, arg := range c.Paths {
 		switch {
+		case arg == "-":
+			scanner := bufio.NewScanner(os.Stdin)
+			for scanner.Scan() {
+				if err := addPath(scanner.Text()); err != nil {
+					return nil, fmt.Errorf("Error while finding files in %s: %s", arg, err)
+				}
+			}
+
+			if err := scanner.Err(); err != nil {
+				return nil, fmt.Errorf("Error while reading lines from stdin: %s",  err)
+			}
+
 		case strings.HasPrefix(arg, "http://") || strings.HasPrefix(arg, "https://"):
 			r, err := http.NewRequest("GET", arg, nil)
 			if err != nil {
@@ -88,19 +117,7 @@ func (c *CLI) findUploadItems() ([]photos.UploadItem, error) {
 				Request: r,
 			})
 		default:
-			if err := filepath.Walk(arg, func(name string, info os.FileInfo, err error) error {
-				switch {
-				case err != nil:
-					return err
-				case info.Mode().IsRegular():
-					if filter([]byte(name)) {
-						uploadItems = append(uploadItems, photos.FileUploadItem(name))
-					}
-					return nil
-				default:
-					return nil
-				}
-			}); err != nil {
+			if err := addPath(arg); err != nil {
 				return nil, fmt.Errorf("Error while finding files in %s: %s", arg, err)
 			}
 		}
