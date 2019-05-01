@@ -6,6 +6,14 @@ builds:
       - linux
     goarch:
       - amd64
+      - arm
+    goarm:
+      - 7
+    ignore:
+      - goos: windows
+        goarch: arm
+      - goos: darwin
+        goarch: arm
 archive:
   files:
     - none*
