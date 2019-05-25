@@ -14,7 +14,7 @@ builds:
         goarch: arm
       - goos: darwin
         goarch: arm
-archive:
+archives:
   files:
     - none*
 brew:
