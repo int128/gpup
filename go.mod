@@ -11,3 +11,5 @@ require (
 	google.golang.org/api v0.0.0-20181101000641-61ce27ee8154
 	gopkg.in/yaml.v2 v2.2.1
 )
+
+go 1.13
