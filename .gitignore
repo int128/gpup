@@ -1,3 +1,6 @@
+/.idea
+/coverage.out
+
 # goreleaser output
 /dist
 

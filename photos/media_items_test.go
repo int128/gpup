@@ -1,6 +1,7 @@
 package photos
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -47,7 +48,9 @@ func TestHTTPUploadItem(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/foo.jpg":
-			w.Write([]byte("example"))
+			if _, err := fmt.Fprint(w, "example"); err != nil {
+				t.Errorf("could not write a response: %s", err)
+			}
 		default:
 			http.Error(w, "Not Found", 404)
 		}
