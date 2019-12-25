@@ -66,6 +66,12 @@ You can specify URLs as well.
 gpup https://www.example.com/image.jpg
 ```
 
+You can also read files from stdin by specifying `-` as the path.
+
+```sh
+cat list_of_files | gpup -
+```
+
 ### Upload files to an album
 
 You can upload files to the album by `-a` option.

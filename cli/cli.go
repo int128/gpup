@@ -15,6 +15,10 @@ type CLI struct {
 	RequestHeaders   []string `long:"request-header" value-name:"KEY:VALUE" description:"Add the header on fetching URLs"`
 	RequestBasicAuth string   `long:"request-auth" value-name:"USER:PASS" description:"Add the basic auth header on fetching URLs"`
 
+	ExcludePattern   string   `long:"exc" value-name:"PATTERN" description:"Regex pattern describing files to exclude"`
+	IncludePattern   string   `long:"inc" value-name:"PATTERN" description:"Regex pattern describing files to include (inclusion overridden by explicit exclusion via --exc)"`
+
+
 	ConfigName string `long:"gpupconfig" env:"GPUPCONFIG" default:"~/.gpupconfig" description:"Path to the config file"`
 	Debug      bool   `long:"debug" env:"DEBUG" description:"Enable request and response logging"`
 
