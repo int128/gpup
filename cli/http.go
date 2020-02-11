@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"net/http/httputil"
 
-	"github.com/int128/oauth2cli"
 	"github.com/int128/gpup/photos"
+	"github.com/int128/oauth2cli"
 	"golang.org/x/oauth2"
 )
 

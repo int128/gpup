@@ -2,6 +2,8 @@ module github.com/int128/gpup
 
 require (
 	cloud.google.com/go v0.31.0 // indirect
+	github.com/cheggaaa/pb/v3 v3.0.4
+	github.com/cloudfoundry/bytefmt v0.0.0-20200131002437-cf55d5288a48
 	github.com/int128/oauth2cli v1.0.0
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/lestrrat-go/backoff v0.0.0-20180409035020-828830ec1d9a

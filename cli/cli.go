@@ -15,8 +15,9 @@ type CLI struct {
 	RequestHeaders   []string `long:"request-header" value-name:"KEY:VALUE" description:"Add the header on fetching URLs"`
 	RequestBasicAuth string   `long:"request-auth" value-name:"USER:PASS" description:"Add the basic auth header on fetching URLs"`
 
-	ConfigName string `long:"gpupconfig" env:"GPUPCONFIG" default:"~/.gpupconfig" description:"Path to the config file"`
-	Debug      bool   `long:"debug" env:"DEBUG" description:"Enable request and response logging"`
+	ConfigName   string `long:"gpupconfig" env:"GPUPCONFIG" default:"~/.gpupconfig" description:"Path to the config file"`
+	Debug        bool   `long:"debug" env:"DEBUG" description:"Enable request and response logging"`
+	ShowProgress bool   `short:"p" long:"progress" env:"PROGRESS" description:"Show upload progress bar"`
 
 	ExternalConfig ExternalConfig `group:"Options read from gpupconfig"`
 

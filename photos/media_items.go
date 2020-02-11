@@ -16,16 +16,25 @@ type UploadItem interface {
 }
 
 // FileUploadItem represents a local file.
-type FileUploadItem string
+type FileUploadItem struct {
+	name string
+}
+
+// NewFileUploadItem creates a new FileUploadItem
+func NewFileUploadItem(name string) *FileUploadItem {
+	return &FileUploadItem{
+		name: name,
+	}
+}
 
 // Open returns a stream.
 // Caller should close it finally.
 func (m FileUploadItem) Open() (io.ReadCloser, int64, error) {
-	f, err := os.Stat(m.String())
+	f, err := os.Stat(m.name)
 	if err != nil {
 		return nil, 0, err
 	}
-	r, err := os.Open(m.String())
+	r, err := os.Open(m.name)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -34,11 +43,15 @@ func (m FileUploadItem) Open() (io.ReadCloser, int64, error) {
 
 // Name returns the filename.
 func (m FileUploadItem) Name() string {
-	return path.Base(m.String())
+	return path.Base(m.name)
 }
 
 func (m FileUploadItem) String() string {
-	return string(m)
+	return m.name
+}
+
+func (m FileUploadItem) SizeAfterOpen() bool {
+	return false
 }
 
 // HTTPUploadItem represents a remote file.
@@ -68,4 +81,8 @@ func (m *HTTPUploadItem) Name() string {
 
 func (m *HTTPUploadItem) String() string {
 	return m.Request.URL.String()
+}
+
+func (m HTTPUploadItem) SizeAfterOpen() bool {
+	return true
 }

@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/cheggaaa/pb/v3"
 	"github.com/lestrrat-go/backoff"
 )
 
@@ -23,6 +24,8 @@ type UploadItem interface {
 	Name() string
 	// String returns the full name, e.g. path or URL.
 	String() string
+	// SizeAfterOpen returns true if size should be added into total size.
+	SizeAfterOpen() bool
 }
 
 // UploadToken represents a pointer to the uploaded item.
@@ -37,10 +40,22 @@ const uploadEndpoint = "https://photoslibrary.googleapis.com/v1/uploads"
 func (p *defaultPhotos) Upload(ctx context.Context, uploadItem UploadItem) (UploadToken, error) {
 	b, cancel := defaultRetryPolicy.Start(ctx)
 	defer cancel()
+	var bar *pb.ProgressBar
+	if b := ctx.Value("progress"); b != nil {
+		if bb, ok := b.(*pb.ProgressBar); ok {
+			bar = bb
+		}
+	}
 	for backoff.Continue(b) {
 		r, size, err := uploadItem.Open()
 		if err != nil {
 			return "", fmt.Errorf("Could not open %s: %s", uploadItem, err)
+		}
+		if bar != nil {
+			r = &Reader{r, bar}
+		}
+		if uploadItem.SizeAfterOpen() {
+			bar.SetTotal(bar.Total() + size)
 		}
 		defer r.Close()
 

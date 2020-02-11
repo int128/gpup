@@ -8,6 +8,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/cheggaaa/pb/v3"
 
 	"github.com/int128/gpup/photos"
 )
@@ -16,7 +19,11 @@ func (c *CLI) upload(ctx context.Context) error {
 	if len(c.Paths) == 0 {
 		return fmt.Errorf("Nothing to upload")
 	}
-	uploadItems, err := c.findUploadItems()
+	var bar *pb.ProgressBar
+	if c.ShowProgress {
+		bar = pb.New(1024).Set(pb.Bytes, true).SetRefreshRate(time.Millisecond * 100)
+	}
+	uploadItems, err := c.findUploadItems(bar)
 	if err != nil {
 		return err
 	}
@@ -32,9 +39,13 @@ func (c *CLI) upload(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	service, err := photos.New(client)
+	service, err := photos.New(ctx, client, bar)
 	if err != nil {
 		return err
+	}
+	if c.ShowProgress {
+		bar.Start()
+		defer bar.Finish()
 	}
 	var results []*photos.AddResult
 	switch {
@@ -58,7 +69,7 @@ func (c *CLI) upload(ctx context.Context) error {
 	return nil
 }
 
-func (c *CLI) findUploadItems() ([]photos.UploadItem, error) {
+func (c *CLI) findUploadItems(bar *pb.ProgressBar) ([]photos.UploadItem, error) {
 	client := c.newHTTPClient()
 	uploadItems := make([]photos.UploadItem, 0)
 	for _, arg := range c.Paths {
@@ -86,7 +97,10 @@ func (c *CLI) findUploadItems() ([]photos.UploadItem, error) {
 				case err != nil:
 					return err
 				case info.Mode().IsRegular():
-					uploadItems = append(uploadItems, photos.FileUploadItem(name))
+					if bar != nil {
+						bar.SetTotal(bar.Total() + info.Size())
+					}
+					uploadItems = append(uploadItems, photos.NewFileUploadItem(name))
 					return nil
 				default:
 					return nil
