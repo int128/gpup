@@ -78,6 +78,8 @@ func (m uploadItemMock) Name() string { return m.String() }
 
 func (m uploadItemMock) String() string { return fmt.Sprintf("UploadItem#%d", m) }
 
+func (m uploadItemMock) SizeAfterOpen() bool { return false }
+
 func makeUploadItems(n int) []UploadItem {
 	ret := make([]UploadItem, n)
 	for i := 0; i < n; i++ {

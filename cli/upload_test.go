@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cheggaaa/pb/v3"
 	"github.com/int128/gpup/photos"
 )
 
@@ -38,7 +39,8 @@ func TestCLI_findUploadItems(t *testing.T) {
 			"http://www.example.com/image.jpg",
 		},
 	}
-	uploadItems, err := c.findUploadItems()
+	bar := pb.New(0)
+	uploadItems, err := c.findUploadItems(bar)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +72,8 @@ func TestCLI_findUploadItems_Headers(t *testing.T) {
 		RequestHeaders:   []string{"Cookie: foo"},
 		RequestBasicAuth: "alice:bob",
 	}
-	uploadItems, err := c.findUploadItems()
+	bar := pb.New(0)
+	uploadItems, err := c.findUploadItems(bar)
 	if err != nil {
 		t.Fatal(err)
 	}

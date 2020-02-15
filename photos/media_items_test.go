@@ -19,7 +19,7 @@ func TestFileUploadItem(t *testing.T) {
 		t.Fatalf("Could not write bytes to file: %s", err)
 	}
 	filename := tempdir + "/foo.jpg"
-	item := FileUploadItem(filename)
+	item := NewFileUploadItem(filename)
 
 	if "foo.jpg" != item.Name() {
 		t.Errorf("Name() wants %s but %s", "foo.jpg", item.Name())

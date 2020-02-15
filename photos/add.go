@@ -70,6 +70,9 @@ type AddResult struct {
 }
 
 func (p *Photos) add(ctx context.Context, uploadItems []UploadItem, req photoslibrary.BatchCreateMediaItemsRequest) []*AddResult {
+	if p.bar != nil {
+		ctx = context.WithValue(ctx, "progress", p.bar)
+	}
 	uploadQueue := make(chan *uploadTask, len(uploadItems))
 	var batchCreateTasks []*batchCreateTask
 	for _, batch := range split(uploadItems, batchCreateSize) {
