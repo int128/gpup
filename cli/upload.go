@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/int128/gpup/photos"
@@ -61,6 +62,12 @@ func (c *CLI) upload(ctx context.Context) error {
 func (c *CLI) findUploadItems() ([]photos.UploadItem, error) {
 	client := c.newHTTPClient()
 	uploadItems := make([]photos.UploadItem, 0)
+	filter, err := c.buildFilter()
+
+	if err != nil {
+		return nil, fmt.Errorf("Could not build filter: %s", err)
+	}
+
 	for _, arg := range c.Paths {
 		switch {
 		case strings.HasPrefix(arg, "http://") || strings.HasPrefix(arg, "https://"):
@@ -86,7 +93,9 @@ func (c *CLI) findUploadItems() ([]photos.UploadItem, error) {
 				case err != nil:
 					return err
 				case info.Mode().IsRegular():
-					uploadItems = append(uploadItems, photos.FileUploadItem(name))
+					if filter([]byte(name)) {
+						uploadItems = append(uploadItems, photos.FileUploadItem(name))
+					}
 					return nil
 				default:
 					return nil
@@ -97,4 +106,39 @@ func (c *CLI) findUploadItems() ([]photos.UploadItem, error) {
 		}
 	}
 	return uploadItems, nil
+}
+
+func (c *CLI) buildFilter() (func([]byte) bool, error) {
+	var err error
+	var includeRegex *regexp.Regexp
+	if c.IncludePattern != "" {
+		includeRegex, err = regexp.Compile(c.IncludePattern)
+		if err != nil {
+			return nil, fmt.Errorf("Could not parse regex: %s", err)
+		}
+	}
+
+	var excludeRegex *regexp.Regexp
+	if c.ExcludePattern != "" {
+		excludeRegex, err = regexp.Compile(c.ExcludePattern)
+		if err != nil {
+			return nil, fmt.Errorf("Could not parse regex: %s", err)
+		}
+	}
+
+	return func(path []byte) bool {
+		if includeRegex != nil {
+			if !includeRegex.Match(path) {
+				return false
+			}
+		}
+
+		if excludeRegex != nil {
+			if excludeRegex.Match(path) {
+				return false
+			}
+		}
+
+		return true
+	}, nil
 }
