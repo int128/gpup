@@ -24,9 +24,9 @@ func IsRetryableError(err error) bool {
 }
 
 // IsRetryableStatusCode returns true if the status code is retryable,
-// such as status code is 5xx or network error occurs.
+// such as status code is 5xx, 429 (rate limit), or network error occurs.
 // Otherwise returns false.
 // See https://developers.google.com/photos/library/guides/best-practices#retrying-failed-requests
 func IsRetryableStatusCode(code int) bool {
-	return code >= 500 && code <= 599
+	return core == 429 || (code >= 500 && code <= 599)
 }
