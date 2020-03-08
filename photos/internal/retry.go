@@ -28,5 +28,5 @@ func IsRetryableError(err error) bool {
 // Otherwise returns false.
 // See https://developers.google.com/photos/library/guides/best-practices#retrying-failed-requests
 func IsRetryableStatusCode(code int) bool {
-	return core == 429 || (code >= 500 && code <= 599)
+	return code == 429 || (code >= 500 && code <= 599)
 }
